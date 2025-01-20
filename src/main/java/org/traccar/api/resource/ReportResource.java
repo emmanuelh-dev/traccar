@@ -335,11 +335,12 @@ public class ReportResource extends SimpleObjectResource<Report> {
     @GET
     public Collection<GeofenceReportItem> getGeofences(
             @QueryParam("geofenceId") List<Long> geofenceIds,
+            @QueryParam("deviceId") List<Long> deviceIds,
             @QueryParam("from") Date from,
             @QueryParam("to") Date to) throws StorageException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
-        LogAction.reportGeofence(getUserId(), false, "geofences", from, to, geofenceIds);
-        return geofenceReportProvider.getObjects(getUserId(), geofenceIds, from, to);
+        LogAction.reportGeofence(getUserId(), false, "geofences", from, to, geofenceIds, deviceIds);
+        return geofenceReportProvider.getObjects(getUserId(), geofenceIds, deviceIds, from, to);
     }
 
 }

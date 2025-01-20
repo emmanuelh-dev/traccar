@@ -61,11 +61,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ReportUtils {
@@ -400,40 +396,22 @@ public class ReportUtils {
         return result;
     }
 
-    public List<GeofenceReportItem> getGeofenceReport(long geofenceId, List<Device> devices, Date from, Date to) {
+    public List<GeofenceReportItem> getGeofenceReport(long geofenceId, Collection<Long> deviceIds, Date from, Date to) {
         List<GeofenceReportItem> result = new ArrayList<>();
+
         try {
+            List<Condition> conditions = new ArrayList<>();
+            conditions.add(new Condition.Equals("geofenceId", geofenceId));
+            conditions.add(new Condition.Between("eventTime", "from", from, "to", to));
+
             var events = storage.getObjects(Event.class, new Request(
                     new Columns.All(),
-                    new Condition.And(
-                            new Condition.Equals("geofenceId", geofenceId),
-                            new Condition.Between("eventTime", "from", from, "to", to)),
+                    Condition.merge(conditions),
                     new Order("eventTime")));
 
-            for (Event event: events) {
-                if (event.getType().equals(Event.TYPE_GEOFENCE_ENTER)) {
-                    GeofenceReportItem geofenceReportItem = new GeofenceReportItem();
-                    geofenceReportItem.setGeofenceId(geofenceId);
-                    geofenceReportItem.setDeviceId(event.getDeviceId());
-                    geofenceReportItem.setEnterTime(event.getEventTime());
-                    result.add(geofenceReportItem);
-                } else if (event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
-                    boolean found = false;
-                    for (GeofenceReportItem geofenceReportItem: result) {
-                        if (geofenceReportItem.getDeviceId() == event.getDeviceId() && geofenceReportItem.getExitTime() == null) {
-                            geofenceReportItem.setExitTime(event.getEventTime());
-                            Duration duration = Duration.between(geofenceReportItem.getEnterTime().toInstant(), geofenceReportItem.getExitTime().toInstant());
-                            geofenceReportItem.setDuration(duration.toSeconds());
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        GeofenceReportItem geofenceReportItem = new GeofenceReportItem();
-                        geofenceReportItem.setGeofenceId(geofenceId);
-                        geofenceReportItem.setDeviceId(event.getDeviceId());
-                        geofenceReportItem.setExitTime(event.getEventTime());
-                        result.add(geofenceReportItem);
-                    }
+            for (Event event : events) {
+                if (shouldProcessEvent(event, deviceIds)) {
+                    processEvent(event, result, geofenceId);
                 }
             }
 
@@ -442,6 +420,41 @@ public class ReportUtils {
         } catch (StorageException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean shouldProcessEvent(Event event, Collection<Long> deviceIds) {
+        return deviceIds.isEmpty() || deviceIds.contains(event.getDeviceId());
+    }
+
+    private void processEvent(Event event, List<GeofenceReportItem> result, long geofenceId) {
+        if (event.getType().equals(Event.TYPE_GEOFENCE_ENTER)) {
+            result.add(createGeofenceReportItem(geofenceId, event.getDeviceId(), event.getEventTime(), null));
+        } else if (event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
+            updateExitTime(result, geofenceId, event);
+        }
+    }
+
+    private GeofenceReportItem createGeofenceReportItem(long geofenceId, long deviceId, Date enterTime, Date exitTime) {
+        GeofenceReportItem item = new GeofenceReportItem();
+        item.setGeofenceId(geofenceId);
+        item.setDeviceId(deviceId);
+        item.setEnterTime(enterTime);
+        item.setExitTime(exitTime);
+        return item;
+    }
+
+    private void updateExitTime(List<GeofenceReportItem> result, long geofenceId, Event event) {
+        for (GeofenceReportItem item : result) {
+            if (item.getDeviceId() == event.getDeviceId() && item.getExitTime() == null) {
+                item.setExitTime(event.getEventTime());
+                Duration duration = Duration.between(item.getEnterTime().toInstant(), item.getExitTime().toInstant());
+                item.setDuration(duration.toSeconds());
+                return;
+            }
+        }
+
+        // If no matching enter event was found, add a new exit-only record
+        result.add(createGeofenceReportItem(geofenceId, event.getDeviceId(), null, event.getEventTime()));
     }
 
 }

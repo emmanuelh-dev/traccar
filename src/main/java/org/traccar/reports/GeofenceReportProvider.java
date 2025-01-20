@@ -46,18 +46,14 @@ public class GeofenceReportProvider {
     }
 
     public Collection<GeofenceReportItem> getObjects(
-            long userId, Collection<Long> geofenceIds,
+            long userId, Collection<Long> geofenceIds, Collection<Long> deviceIds,
             Date from, Date to) throws StorageException {
         reportUtils.checkPeriodLimit(from, to);
 
         ArrayList<GeofenceReportItem> result = new ArrayList<>();
 
-        var devices = storage.getObjects(Device.class, new Request(
-                new Columns.All(),
-                new Condition.Permission(User.class, userId, Device.class)));
-
         for (long geofenceId: geofenceIds) {
-            result.addAll(reportUtils.getGeofenceReport(geofenceId, devices, from, to));
+            result.addAll(reportUtils.getGeofenceReport(geofenceId, deviceIds, from, to));
         }
 
         return result;
