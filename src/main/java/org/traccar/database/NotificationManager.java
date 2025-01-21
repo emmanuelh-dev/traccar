@@ -24,13 +24,9 @@ import org.traccar.forward.EventData;
 import org.traccar.forward.EventForwarder;
 import org.traccar.geocoder.Geocoder;
 import org.traccar.helper.DateUtil;
-import org.traccar.model.Calendar;
-import org.traccar.model.Device;
-import org.traccar.model.Event;
-import org.traccar.model.Geofence;
-import org.traccar.model.Maintenance;
-import org.traccar.model.Position;
+import org.traccar.model.*;
 import org.traccar.notification.MessageException;
+import org.traccar.notification.NotificationMessage;
 import org.traccar.notification.NotificatorManager;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.Storage;
@@ -136,13 +132,29 @@ public class NotificationManager {
                     }
                     for (String notificator : notification.getNotificatorsTypes()) {
                         try {
-                            notificatorManager.getNotificator(notificator).send(notification, user, event, position);
+                            NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, user, event, position);
+                            if (message != null) {
+                                saveAlert(event, notification, user, notificator, message);
+                            }
                         } catch (MessageException exception) {
                             LOGGER.warn("Notification failed", exception);
                         }
                     }
                 });
             });
+        }
+    }
+
+    private void saveAlert(Event event, Notification notification, User user, String notificator, NotificationMessage message) {
+        Alert alert = new Alert(event, user, notification);
+        alert.addNotificator(notificator);
+        alert.set("subject", message.getSubject());
+        alert.set("body", message.getBody());
+
+        try {
+            storage.addObject(alert, new Request(new Columns.Exclude("id")));
+        } catch (StorageException error) {
+            LOGGER.warn("Notification save failed", error);
         }
     }
 

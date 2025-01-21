@@ -21,6 +21,7 @@ import org.traccar.model.Notification;
 import org.traccar.model.Position;
 import org.traccar.model.User;
 import org.traccar.notification.NotificationFormatter;
+import org.traccar.notification.NotificationMessage;
 import org.traccar.session.ConnectionManager;
 
 import jakarta.inject.Inject;
@@ -40,7 +41,7 @@ public final class NotificatorWeb extends Notificator {
     }
 
     @Override
-    public void send(Notification notification, User user, Event event, Position position) {
+    public NotificationMessage send(Notification notification, User user, Event event, Position position) {
 
         Event copy = new Event();
         copy.setId(event.getId());
@@ -56,6 +57,8 @@ public final class NotificatorWeb extends Notificator {
         copy.set("message", message.getBody());
 
         connectionManager.updateEvent(true, user.getId(), copy);
+
+        return message;
     }
 
 }

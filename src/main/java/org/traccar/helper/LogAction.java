@@ -145,4 +145,14 @@ public final class LogAction {
                 geofenceIds.toString()));
     }
 
+    public static void logReport(
+            long userId, boolean scheduled, String report,
+            Date from, Date to, List<Long> deviceIds, List<Long> groupIds) {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        LOGGER.info(String.format(
+                PATTERN_REPORT, userId, scheduled ? "scheduled" : "report", report,
+                dateFormat.format(from), dateFormat.format(to),
+                deviceIds.toString(), groupIds.toString()));
+    }
+
 }

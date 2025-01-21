@@ -15,7 +15,10 @@
  */
 package org.traccar.api.resource;
 
+import jakarta.ws.rs.*;
 import org.traccar.api.BaseResource;
+import org.traccar.helper.LogAction;
+import org.traccar.model.Alert;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.storage.StorageException;
@@ -23,12 +26,6 @@ import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -49,4 +46,11 @@ public class EventResource extends BaseResource {
         return event;
     }
 
+    @Path("alerts/{id}")
+    @DELETE
+    public Response remove(@PathParam("id") long id) throws Exception {
+        storage.removeObject(Alert.class, new Request(new Condition.Equals("eventId", id)));
+        LogAction.remove(getUserId(), Alert.class, id);
+        return Response.noContent().build();
+    }
 }

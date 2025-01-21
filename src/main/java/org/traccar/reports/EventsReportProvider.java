@@ -20,12 +20,7 @@ import org.apache.poi.ss.util.WorkbookUtil;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.helper.model.DeviceUtil;
-import org.traccar.model.Device;
-import org.traccar.model.Event;
-import org.traccar.model.Geofence;
-import org.traccar.model.Group;
-import org.traccar.model.Maintenance;
-import org.traccar.model.Position;
+import org.traccar.model.*;
 import org.traccar.reports.common.ReportUtils;
 import org.traccar.reports.model.DeviceReportSection;
 import org.traccar.storage.Storage;
@@ -174,6 +169,31 @@ public class EventsReportProvider {
             context.putVar("from", from);
             context.putVar("to", to);
             reportUtils.processTemplateWithSheets(inputStream, outputStream, context);
+        }
+    }
+
+    public Collection<Alert> getAlerts(
+            long userId, Date from, Date to) throws StorageException {
+        reportUtils.checkPeriodLimit(from, to);
+        return getAlertsList(userId, from, to);
+    }
+
+    private List<Alert> getAlertsList(long userId, Date from, Date to) throws StorageException {
+        return storage.getObjects(Alert.class, new Request(
+                new Columns.All(),
+                new Condition.And(
+                        new Condition.Equals("userId", userId),
+                        new Condition.Between("alertTime", "from", from, "to", to)),
+                new Order("alertTime")));
+    }
+
+    public void removeAllAlerts(long userId) throws StorageException {
+        List<Alert> alerts = storage.getObjects(Alert.class, new Request(
+                new Columns.All(),
+                new Condition.Equals("userId", userId)));
+
+        for (Alert alert : alerts) {
+            storage.removeObject(Alert.class, new Request(new Condition.Equals("id", alert.getId())));
         }
     }
 }

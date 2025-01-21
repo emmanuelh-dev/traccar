@@ -34,9 +34,10 @@ public abstract class Notificator {
         this.templatePath = templatePath;
     }
 
-    public void send(Notification notification, User user, Event event, Position position) throws MessageException {
+    public NotificationMessage send(Notification notification, User user, Event event, Position position) throws MessageException {
         var message = notificationFormatter.formatMessage(notification, user, event, position, templatePath);
         send(user, message, event, position);
+        return message;
     }
 
     public void send(User user, NotificationMessage message, Event event, Position position) throws MessageException {

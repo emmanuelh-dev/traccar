@@ -16,12 +16,10 @@
  */
 package org.traccar.api.resource;
 
+import jakarta.ws.rs.*;
 import org.traccar.api.SimpleObjectResource;
 import org.traccar.helper.LogAction;
-import org.traccar.model.Event;
-import org.traccar.model.Position;
-import org.traccar.model.Report;
-import org.traccar.model.UserRestrictions;
+import org.traccar.model.*;
 import org.traccar.reports.*;
 import org.traccar.reports.common.ReportExecutor;
 import org.traccar.reports.common.ReportMailer;
@@ -29,13 +27,6 @@ import org.traccar.reports.model.*;
 import org.traccar.storage.StorageException;
 
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -341,6 +332,22 @@ public class ReportResource extends SimpleObjectResource<Report> {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
         LogAction.reportGeofence(getUserId(), false, "geofences", from, to, geofenceIds, deviceIds);
         return geofenceReportProvider.getObjects(getUserId(), geofenceIds, deviceIds, from, to);
+    }
+
+    @Path("alerts")
+    @GET
+    public Collection<Alert> getAlerts(
+            @QueryParam("from") Date from,
+            @QueryParam("to") Date to) throws StorageException {
+        LogAction.logReport(getUserId(), false, "alerts", from, to, List.of(), List.of());
+        return eventsReportProvider.getAlerts(getUserId(), from, to);
+    }
+
+    @Path("alerts")
+    @DELETE
+    public Response removeAllAlerts() throws Exception {
+        eventsReportProvider.removeAllAlerts(getUserId());
+        return Response.noContent().build();
     }
 
 }

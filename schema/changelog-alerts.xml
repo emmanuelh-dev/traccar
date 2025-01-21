@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+  logicalFilePath="changelog-alerts">
+
+  <changeSet author="tahir" id="changelog-alerts">
+
+    <createTable tableName="tc_alerts">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="type" type="VARCHAR(128)">
+        <constraints nullable="false" />
+      </column>
+      <column name="alerttime" type="TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="deviceid" type="INT" />
+      <column name="userid" type="INT" >
+        <constraints nullable="false" />
+      </column>
+      <column name="eventid" type="INT" >
+        <constraints nullable="false" />
+      </column>
+      <column name="notificationid" type="INT" />
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+  </changeSet>
+
+</databaseChangeLog>
