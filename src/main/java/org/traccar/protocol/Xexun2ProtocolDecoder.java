@@ -154,14 +154,14 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void decodeDeviceStatus(Position position, ByteBuf buf, ByteBuf remaining) {
         position.set(Position.KEY_RSSI, buf.readUnsignedByte());
-
-        int battery = buf.readUnsignedShort();
-        position.set(Position.KEY_CHARGE, BitUtil.check(battery, 15));
-        position.set(Position.KEY_BATTERY_LEVEL, BitUtil.to(battery, 15));
-
-        position.set(Position.KEY_STATUS, buf.readUnsignedByte());
+        int battery = buf.readUnsignedByte();
+        position.set(Position.KEY_BATTERY_LEVEL, battery);
+        
+        int status = buf.readUnsignedByte();
+        position.set(Position.KEY_STATUS, status);
+        position.set("trackingSequence", buf.readUnsignedByte());
         position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
-
+    
         decodeData(position, remaining);
     }
 
