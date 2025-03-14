@@ -1,5 +1,0 @@
-[submodule "traccar-web"]
-	path = traccar-web
-	url = https://github.com/emmanuelh-dev/GPS.git
-	branch = master
-	ignore = all

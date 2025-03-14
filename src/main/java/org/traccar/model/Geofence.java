@@ -96,4 +96,14 @@ public class Geofence extends ExtendedModel implements Schedulable {
         this.geometry = geometry;
     }
 
+    private boolean notify;
+
+    public boolean getNotify() {
+        return notify;
+    }
+
+    public void setNotify(boolean notify) {
+        this.notify = notify;
+    }
+
 }

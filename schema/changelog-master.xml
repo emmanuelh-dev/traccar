@@ -49,5 +49,6 @@
 
   <include file="changelog-alerts.xml" relativeToChangelogFile="true" />
   <include file="changelog-inmates.xml" relativeToChangelogFile="true" />
+  <include file="changelog-notify.xml" relativeToChangelogFile="true" />
 
 </databaseChangeLog>

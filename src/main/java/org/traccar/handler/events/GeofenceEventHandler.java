@@ -59,7 +59,7 @@ public class GeofenceEventHandler extends BaseEventHandler {
             if (geofence != null) {
                 long calendarId = geofence.getCalendarId();
                 Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
-                if (calendar == null || calendar.checkMoment(position.getFixTime())) {
+                if ((calendar == null || calendar.checkMoment(position.getFixTime())) && geofence.getNotify()) {
                     Event event = new Event(Event.TYPE_GEOFENCE_EXIT, position);
                     event.setGeofenceId(geofenceId);
                     callback.eventDetected(event);
@@ -67,9 +67,10 @@ public class GeofenceEventHandler extends BaseEventHandler {
             }
         }
         for (long geofenceId : newGeofences) {
-            long calendarId = cacheManager.getObject(Geofence.class, geofenceId).getCalendarId();
+            Geofence geofence = cacheManager.getObject(Geofence.class, geofenceId);
+            long calendarId = geofence.getCalendarId();
             Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
-            if (calendar == null || calendar.checkMoment(position.getFixTime())) {
+            if ((calendar == null || calendar.checkMoment(position.getFixTime())) && geofence.getNotify()) {
                 Event event = new Event(Event.TYPE_GEOFENCE_ENTER, position);
                 event.setGeofenceId(geofenceId);
                 callback.eventDetected(event);
