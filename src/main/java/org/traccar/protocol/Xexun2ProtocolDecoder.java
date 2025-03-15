@@ -158,6 +158,10 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int batteryLevel = buf.readUnsignedByte();
         position.set(Position.KEY_BATTERY_LEVEL, batteryLevel);
         
+        if (batteryLevel < 10) {
+            position.set(Position.KEY_ALARM, Position.ALARM_LOW_BATTERY);
+        }
+        
         int status = buf.readUnsignedByte();
         position.set(Position.KEY_STATUS, status);
         
