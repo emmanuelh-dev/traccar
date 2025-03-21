@@ -25,6 +25,8 @@ import org.traccar.session.cache.CacheManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import org.traccar.model.User;
 
 public class GeofenceEventHandler extends BaseEventHandler {
 
@@ -60,9 +62,24 @@ public class GeofenceEventHandler extends BaseEventHandler {
                 long calendarId = geofence.getCalendarId();
                 Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
                 if ((calendar == null || calendar.checkMoment(position.getFixTime())) && geofence.getNotify()) {
-                    Event event = new Event(Event.TYPE_GEOFENCE_EXIT, position);
-                    event.setGeofenceId(geofenceId);
-                    callback.eventDetected(event);
+                    // Obtener todos los usuarios asociados al dispositivo
+                    Set<User> deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), User.class);
+                    
+                    // Si no hay usuarios, crear un solo evento sin usuario específico
+                    if (deviceUsers.isEmpty()) {
+                        Event event = new Event(Event.TYPE_GEOFENCE_EXIT, position);
+                        event.setGeofenceId(geofenceId);
+                        callback.eventDetected(event);
+                    } else {
+                        // Crear un evento para cada usuario asociado al dispositivo
+                        for (User user : deviceUsers) {
+                            Event event = new Event(Event.TYPE_GEOFENCE_EXIT, position);
+                            event.setGeofenceId(geofenceId);
+                            // Asignar el ID del usuario al evento
+                            event.set("userId", user.getId());
+                            callback.eventDetected(event);
+                        }
+                    }
                 }
             }
         }
@@ -71,9 +88,24 @@ public class GeofenceEventHandler extends BaseEventHandler {
             long calendarId = geofence.getCalendarId();
             Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
             if ((calendar == null || calendar.checkMoment(position.getFixTime())) && geofence.getNotify()) {
-                Event event = new Event(Event.TYPE_GEOFENCE_ENTER, position);
-                event.setGeofenceId(geofenceId);
-                callback.eventDetected(event);
+                // Obtener todos los usuarios asociados al dispositivo
+                Set<User> deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), User.class);
+                
+                // Si no hay usuarios, crear un solo evento sin usuario específico
+                if (deviceUsers.isEmpty()) {
+                    Event event = new Event(Event.TYPE_GEOFENCE_ENTER, position);
+                    event.setGeofenceId(geofenceId);
+                    callback.eventDetected(event);
+                } else {
+                    // Crear un evento para cada usuario asociado al dispositivo
+                    for (User user : deviceUsers) {
+                        Event event = new Event(Event.TYPE_GEOFENCE_ENTER, position);
+                        event.setGeofenceId(geofenceId);
+                        // Asignar el ID del usuario al evento
+                        event.set("userId", user.getId());
+                        callback.eventDetected(event);
+                    }
+                }
             }
         }
     }
