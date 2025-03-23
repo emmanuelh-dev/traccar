@@ -46,6 +46,7 @@ import org.traccar.storage.query.Request;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -69,6 +70,7 @@ public class CacheManager implements BroadcastInterface {
     private final CacheGraph graph = new CacheGraph();
 
     private Server server;
+    private List<Geofence> geofences;
     private final Map<Long, Position> devicePositions = new HashMap<>();
     private final Map<Long, HashSet<Object>> deviceReferences = new HashMap<>();
 
@@ -78,6 +80,7 @@ public class CacheManager implements BroadcastInterface {
         this.storage = storage;
         this.broadcastService = broadcastService;
         server = storage.getObject(Server.class, new Request(new Columns.All()));
+        geofences = storage.getObjects(Geofence.class, new Request(new Columns.All()));
         broadcastService.registerListener(this);
     }
 
@@ -122,6 +125,15 @@ public class CacheManager implements BroadcastInterface {
         try {
             lock.readLock().lock();
             return server;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public List<Geofence> getGeofences() {
+        try {
+            lock.readLock().lock();
+            return geofences;
         } finally {
             lock.readLock().unlock();
         }
@@ -218,6 +230,10 @@ public class CacheManager implements BroadcastInterface {
         if (clazz.equals(Server.class)) {
             server = storage.getObject(Server.class, new Request(new Columns.All()));
             return;
+        }
+
+        if (clazz.equals(Geofence.class)) {
+            geofences = storage.getObjects(Geofence.class, new Request(new Columns.All()));
         }
 
         var after = storage.getObject(clazz, new Request(new Columns.All(), new Condition.Equals("id", id)));

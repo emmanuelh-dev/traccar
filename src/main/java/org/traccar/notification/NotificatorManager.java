@@ -79,4 +79,8 @@ public class NotificatorManager {
         return types.stream().map(Typed::new).collect(Collectors.toUnmodifiableSet());
     }
 
+    public String getNotificators() {
+        return String.join(",", types.stream().toList());
+    }
+
 }

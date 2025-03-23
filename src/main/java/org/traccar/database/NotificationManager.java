@@ -143,6 +143,34 @@ public class NotificationManager {
                 });
             });
         }
+
+        if (event.getType().equals(Event.TYPE_GEOFENCE_ENTER) || event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
+            Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
+            if (geofence.getNotify()) {
+                Set<User> deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), User.class);
+                deviceUsers.forEach(user -> {
+                    if (blockedUsers.contains(user.getId())) {
+                        LOGGER.info("User {} notification blocked", user.getId());
+                        return;
+                    }
+
+                    Notification notification = new Notification();
+                    notification.setType(event.getType());
+                    notification.setNotificators(notificatorManager.getNotificators());
+
+                    for (String notificator : notification.getNotificatorsTypes()) {
+                        try {
+                            NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, user, event, position);
+                            if (message != null) {
+                                saveAlert(event, notification, user, notificator, message);
+                            }
+                        } catch (MessageException exception) {
+                            LOGGER.warn("Notification failed", exception);
+                        }
+                    }
+                });
+            }
+        }
     }
 
     private void saveAlert(Event event, Notification notification, User user, String notificator, NotificationMessage message) {

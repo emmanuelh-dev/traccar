@@ -36,6 +36,21 @@ public final class GeofenceUtil {
                 result.add(geofence.getId());
             }
         }
+
+        // Check unlinked geofences
+        List<Geofence> allGeofences = cacheManager.getGeofences();
+        List<Geofence> linkedGeofences = cacheManager.getDeviceObjects(position.getDeviceId(), Geofence.class).stream().toList();
+
+        // Remove already processed geofences
+        allGeofences.removeAll(linkedGeofences);
+
+        for (Geofence geofence : allGeofences) {
+            if (geofence.getGeometry().containsPoint(
+                    config, geofence, position.getLatitude(), position.getLongitude())) {
+                result.add(geofence.getId());
+            }
+        }
+
         return result;
     }
 
