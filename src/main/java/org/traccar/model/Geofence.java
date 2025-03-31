@@ -106,4 +106,14 @@ public class Geofence extends ExtendedModel implements Schedulable {
         this.notify = notify;
     }
 
+    private long userId;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
 }
