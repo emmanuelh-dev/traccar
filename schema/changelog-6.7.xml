@@ -8,6 +8,12 @@
 
   <changeSet author="author" id="changelog-6.7">
 
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <columnExists tableName="tc_geofences" columnName="userid"/>
+      </not>
+    </preConditions>
+
     <addColumn tableName="tc_geofences">
       <column name="userid" type="INT" defaultValueNumeric="0">
         <constraints nullable="false" />
