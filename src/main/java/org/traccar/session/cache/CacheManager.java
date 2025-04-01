@@ -131,9 +131,20 @@ public class CacheManager implements BroadcastInterface {
     }
 
     public List<Geofence> getGeofences() {
+        return getGeofences(0);
+    }
+
+
+    public List<Geofence> getGeofences(long userId) {
         try {
             lock.readLock().lock();
-            return geofences;
+            if (userId == 0) {
+                return geofences;
+            } else {
+                return geofences.stream()
+                        .filter(geofence -> geofence.getUserId() == userId)
+                        .collect(Collectors.toList());
+            }
         } finally {
             lock.readLock().unlock();
         }

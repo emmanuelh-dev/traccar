@@ -149,6 +149,12 @@ public class NotificationManager {
             if (geofence.getNotify()) {
                 Set<User> deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), User.class);
                 deviceUsers.forEach(user -> {
+                    // Verificar si el usuario es el propietario de la geozona
+                    if (user.getId() != geofence.getUserId()) {
+                        LOGGER.info("User {} is not the owner of geofence {}", user.getId(), geofence.getId());
+                        return;
+                    }
+                    
                     if (blockedUsers.contains(user.getId())) {
                         LOGGER.info("User {} notification blocked", user.getId());
                         return;

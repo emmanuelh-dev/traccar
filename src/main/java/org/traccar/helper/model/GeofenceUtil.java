@@ -29,6 +29,10 @@ public final class GeofenceUtil {
     }
 
     public static List<Long> getCurrentGeofences(Config config, CacheManager cacheManager, Position position) {
+        return getCurrentGeofences(config, cacheManager, position, 0);    
+    }
+    
+    public static List<Long> getCurrentGeofences(Config config, CacheManager cacheManager, Position position, long userId) {
         List<Long> result = new ArrayList<>();
         for (Geofence geofence : cacheManager.getDeviceObjects(position.getDeviceId(), Geofence.class)) {
             if (geofence.getGeometry().containsPoint(
@@ -38,7 +42,7 @@ public final class GeofenceUtil {
         }
 
         // Check unlinked geofences
-        List<Geofence> allGeofences = cacheManager.getGeofences();
+        List<Geofence> allGeofences = cacheManager.getGeofences(userId);
         List<Geofence> linkedGeofences = cacheManager.getDeviceObjects(position.getDeviceId(), Geofence.class).stream().toList();
 
         // Remove already processed geofences

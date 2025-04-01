@@ -17,19 +17,41 @@ package org.traccar.api.resource;
 
 import org.traccar.api.ExtendedObjectResource;
 import org.traccar.model.Geofence;
+import org.traccar.session.cache.CacheManager;
+import org.traccar.storage.StorageException;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Path("geofences")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class GeofenceResource extends ExtendedObjectResource<Geofence> {
 
+    @Inject
+    private CacheManager cacheManager;
+
     public GeofenceResource() {
         super(Geofence.class, "name");
+    }
+
+    @GET
+    @Path("byUser")
+    public Collection<Geofence> getByUser(@QueryParam("userId") long userId) throws StorageException {
+        if (userId > 0) {
+            permissionsService.checkUser(getUserId(), userId);
+            return cacheManager.getGeofences(userId);
+        } else {
+            return cacheManager.getGeofences(getUserId());
+        }
     }
 
 }
