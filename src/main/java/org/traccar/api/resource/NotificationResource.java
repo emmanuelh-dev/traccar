@@ -69,10 +69,20 @@ public class NotificationResource extends ExtendedObjectResource<Notification> {
     public Collection<Typed> get() {
         List<Typed> types = new LinkedList<>();
         Field[] fields = Event.class.getDeclaredFields();
+        Set<String> excludedTypes = Set.of(
+                Event.TYPE_IGNITION_ON, 
+                Event.TYPE_IGNITION_OFF, 
+                Event.TYPE_DEVICE_FUEL_DROP,
+                Event.TYPE_MAINTENANCE, 
+                Event.TYPE_DRIVER_CHANGED);
+        
         for (Field field : fields) {
             if (Modifier.isStatic(field.getModifiers()) && field.getName().startsWith("TYPE_")) {
                 try {
-                    types.add(new Typed(field.get(null).toString()));
+                    String eventType = field.get(null).toString();
+                    if (!excludedTypes.contains(eventType)) {
+                        types.add(new Typed(eventType));
+                    }
                 } catch (IllegalArgumentException | IllegalAccessException error) {
                     LOGGER.warn("Get event types error", error);
                 }
