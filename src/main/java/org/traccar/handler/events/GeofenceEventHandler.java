@@ -22,19 +22,20 @@ import org.traccar.model.Event;
 import org.traccar.model.Geofence;
 import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
+import org.traccar.session.GeofenceSessionManager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import org.traccar.model.User;
 
 public class GeofenceEventHandler extends BaseEventHandler {
 
     private final CacheManager cacheManager;
+    private final GeofenceSessionManager geofenceSessionManager;
 
     @Inject
-    public GeofenceEventHandler(CacheManager cacheManager) {
+    public GeofenceEventHandler(CacheManager cacheManager, GeofenceSessionManager geofenceSessionManager) {
         this.cacheManager = cacheManager;
+        this.geofenceSessionManager = geofenceSessionManager;
     }
 
     @Override
@@ -60,21 +61,23 @@ public class GeofenceEventHandler extends BaseEventHandler {
             Geofence geofence = cacheManager.getObject(Geofence.class, geofenceId);
             if (geofence != null) {
                 long calendarId = geofence.getCalendarId();
-                Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
-                if (calendar == null || calendar.checkMoment(position.getFixTime())) {
+                Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;                if (calendar == null || calendar.checkMoment(position.getFixTime())) {
                     Event event = new Event(Event.TYPE_GEOFENCE_EXIT, position);
                     event.setGeofenceId(geofenceId);
                     callback.eventDetected(event);
+                    // Actualizar sesiones de geozona
+                    geofenceSessionManager.handleGeofenceEvent(event);
                 }
             }
         }
         for (long geofenceId : newGeofences) {
             long calendarId = cacheManager.getObject(Geofence.class, geofenceId).getCalendarId();
-            Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
-            if (calendar == null || calendar.checkMoment(position.getFixTime())) {
+            Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;            if (calendar == null || calendar.checkMoment(position.getFixTime())) {
                 Event event = new Event(Event.TYPE_GEOFENCE_ENTER, position);
                 event.setGeofenceId(geofenceId);
                 callback.eventDetected(event);
+                // Actualizar sesiones de geozona
+                geofenceSessionManager.handleGeofenceEvent(event);
             }
         }
     }

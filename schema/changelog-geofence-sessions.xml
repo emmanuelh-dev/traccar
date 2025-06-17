@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+
+  <changeSet author="system" id="geofence-sessions-optimization">
+
+    <createTable tableName="tc_geofence_sessions">
+      <column autoIncrement="true" name="id" type="BIGINT">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="deviceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="geofenceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="entertime" type="TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="exittime" type="TIMESTAMP" />
+      <column name="duration" type="BIGINT" defaultValue="0">
+        <constraints nullable="false" />
+      </column>
+      <column name="enterpositionid" type="BIGINT" />
+      <column name="exitpositionid" type="BIGINT" />
+    </createTable>
+
+    <!-- Índices para optimizar consultas -->
+    <createIndex tableName="tc_geofence_sessions" indexName="idx_geofence_sessions_device_time">
+      <column name="deviceid" />
+      <column name="entertime" />
+    </createIndex>
+
+    <createIndex tableName="tc_geofence_sessions" indexName="idx_geofence_sessions_geofence_time">
+      <column name="geofenceid" />
+      <column name="entertime" />
+    </createIndex>
+
+    <createIndex tableName="tc_geofence_sessions" indexName="idx_geofence_sessions_device_geofence_time">
+      <column name="deviceid" />
+      <column name="geofenceid" />
+      <column name="entertime" />
+    </createIndex>
+
+    <!-- Claves foráneas -->
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="deviceid" 
+      constraintName="fk_geofence_sessions_deviceid" 
+      onDelete="CASCADE" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_devices" />
+
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="geofenceid" 
+      constraintName="fk_geofence_sessions_geofenceid" 
+      onDelete="CASCADE" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_geofences" />
+
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="enterpositionid" 
+      constraintName="fk_geofence_sessions_enterpositionid" 
+      onDelete="SET NULL" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_positions" />
+
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="exitpositionid" 
+      constraintName="fk_geofence_sessions_exitpositionid" 
+      onDelete="SET NULL" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_positions" />
+
+  </changeSet>
+
+</databaseChangeLog>

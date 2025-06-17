@@ -243,14 +243,19 @@ public class DatabaseStorage extends Storage {
         if (genericCondition != null) {
             if (appendWhere) {
                 result.append(" WHERE ");
-            }
-            if (genericCondition instanceof Condition.Compare condition) {
+            }            if (genericCondition instanceof Condition.Compare condition) {
 
                 result.append(condition.getColumn());
                 result.append(" ");
-                result.append(condition.getOperator());
-                result.append(" :");
-                result.append(condition.getVariable());
+                if (condition.getValue() == null && "IS".equals(condition.getOperator())) {
+                    result.append("IS NULL");
+                } else if (condition.getValue() == null && "IS NOT".equals(condition.getOperator())) {
+                    result.append("IS NOT NULL");
+                } else {
+                    result.append(condition.getOperator());
+                    result.append(" :");
+                    result.append(condition.getVariable());
+                }
 
             } else if (genericCondition instanceof Condition.Between condition) {
 

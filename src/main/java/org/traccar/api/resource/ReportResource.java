@@ -58,13 +58,11 @@ public class ReportResource extends SimpleObjectResource<Report> {
     private SummaryReportProvider summaryReportProvider;
 
     @Inject
-    private TripsReportProvider tripsReportProvider;
-
-    @Inject
+    private TripsReportProvider tripsReportProvider;    @Inject
     private DevicesReportProvider devicesReportProvider;
 
     @Inject
-    private GeofenceReportProvider geofenceReportProvider;
+    private GeofenceSessionReportProvider geofenceSessionReportProvider;
 
     @Inject
     private ReportMailer reportMailer;
@@ -317,18 +315,17 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), type.equals("mail"), stream -> {
             devicesReportProvider.getExcel(stream, getUserId());
         });
-    }
-
-    @Path("geofences")
+    }    @Path("geofences")
     @GET
-    public Collection<GeofenceReportItem> getGeofences(
+    public Collection<GeofenceSession> getGeofences(
             @QueryParam("geofenceId") List<Long> geofenceIds,
             @QueryParam("deviceId") List<Long> deviceIds,
             @QueryParam("from") Date from,
             @QueryParam("to") Date to) throws StorageException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
         LogAction.reportGeofence(getUserId(), false, "geofences", from, to, geofenceIds, deviceIds);
-        return geofenceReportProvider.getObjects(getUserId(), geofenceIds, deviceIds, from, to);
+        // Use new optimized session-based provider instead of old event-based approach
+        return geofenceSessionReportProvider.getObjects(getUserId(), deviceIds, List.of(), geofenceIds, from, to);
     }
 
     @Path("alerts")
