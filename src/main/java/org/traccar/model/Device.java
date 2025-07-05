@@ -19,14 +19,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.traccar.storage.QueryIgnore;
 import org.traccar.storage.StorageName;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneOffset;
 import java.util.Date;
 
 @StorageName("tc_devices")
 public class Device extends GroupedModel implements Disableable, Schedulable {
+
+    // Constructor para inicializar el campo createdAt automáticamente
+    public Device() {
+        if (this.createdAt == null) {
+            this.createdAt = new Date();
+        }
+    }
 
     private long calendarId;
 
@@ -255,18 +258,8 @@ public class Device extends GroupedModel implements Disableable, Schedulable {
         this.overspeedGeofenceId = overspeedGeofenceId;
     }
 
-    // Nuevo campo createdAt
     private Date createdAt;
 
-    // Constructor para inicializar el campo createdAt
-    public Device() {
-        if(this.createdAt == null){
-            this.createdAt = Date.from(
-                LocalDateTime.of(LocalDate.now(), LocalTime.now()).atZone(ZoneOffset.systemDefault()).toInstant());
-        }
-    }
-
-    // Métodos getter y setter para el nuevo campo createdAt
     public Date getCreatedAt() {
         return createdAt;
     }
