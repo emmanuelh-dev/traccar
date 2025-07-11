@@ -49,15 +49,6 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
-    private double convertCoordinate(double value) {
-        double absValue = Math.abs(value);
-        double degrees = Math.floor(absValue / 100);
-        double minutes = absValue - degrees * 100;
-        double result = degrees + minutes / 60;
-
-        return value < 0 ? -result : result;
-    }
-
     private String decodeAlarm(long value) {
         if (BitUtil.check(value, 0)) {
             return Position.ALARM_SOS;
@@ -76,17 +67,19 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         setCoordinates(position, buf);
         position.setAltitude(buf.readFloat());
         position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
-        int bestSignalAvg = buf.readUnsignedByte();
+        position.set("signalAvg", buf.readUnsignedByte());
         position.setSpeed(UnitsConverter.knotsFromKph((double) buf.readUnsignedShort() / 10.0));
         position.setCourse((double) buf.readUnsignedShort() / 10.0);
-        int ephemerisSynchronization = buf.readUnsignedByte();
-        int trackingSeconds = buf.readUnsignedByte();
+        position.set("ephemerisSync", buf.readUnsignedByte());
+        position.set("trackingSeconds", buf.readUnsignedByte());
         position.setAccuracy((double) buf.readUnsignedShort() / 10.0);
         byte[] satelliteSignals = new byte[4];
         buf.readBytes(satelliteSignals);
-        String signalValues = bytesToHex(satelliteSignals);
+        position.set("satelliteSignals", bytesToHex(satelliteSignals));
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void decodeWifi(Position position, ByteBuf buf, ByteBuf remaining) {
@@ -101,7 +94,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setNetwork(network);
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void decodeLbs(Position position, ByteBuf buf, ByteBuf remaining) {
@@ -126,17 +121,39 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             position.setOutdated(false);
         }
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void setCoordinates(Position position, ByteBuf buf) {
-        double rawLatitude = buf.readFloat();
-        double rawLongitude = buf.readFloat();
-        double latitude = convertCoordinate(rawLatitude);
-        double longitude = convertCoordinate(rawLongitude);
-        if (latitude != 0 && longitude != 0) {
-            position.setLatitude(latitude);
-            position.setLongitude(longitude);
+        if (buf.readableBytes() >= 8) {
+            // Read raw coordinate values
+            int latitudeRaw = buf.readInt();
+            int longitudeRaw = buf.readInt();
+            
+            // Convert from the protocol's coordinate format
+            // Based on the working example: lat: 19.15103, lon: -96.12588
+            double latitude = latitudeRaw / 1000000.0;
+            double longitude = longitudeRaw / 1000000.0;
+            
+            LOGGER.debug("Raw coordinates: latRaw={}, lonRaw={}, converted: lat={}, lon={}", 
+                        latitudeRaw, longitudeRaw, latitude, longitude);
+            
+            // Validate coordinate ranges before setting
+            if (latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 && longitude <= 180.0) {
+                if (latitude != 0 || longitude != 0) {
+                    position.setLatitude(latitude);
+                    position.setLongitude(longitude);
+                    position.setValid(true);
+                } else {
+                    position.setValid(false);
+                }
+            } else {
+                LOGGER.warn("Invalid coordinates: lat={}, lon={} (raw: {}, {})", 
+                           latitude, longitude, latitudeRaw, longitudeRaw);
+                position.setValid(false);
+            }
         }
     }
 
@@ -148,8 +165,13 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int bloodOxygen = buf.readUnsignedByte();
 
         position.set(Position.KEY_HEART_RATE, heartRate);
+        position.set("systolicBp", systolicBp);
+        position.set("diastolicBp", diastolicBp);
+        position.set("bloodOxygen", bloodOxygen);
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void decodeDeviceStatus(Position position, ByteBuf buf, ByteBuf remaining) {
@@ -176,7 +198,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         position.set("trackingSequence", buf.readUnsignedByte());
         position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
     
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void decodeMotion(Position position, ByteBuf buf, ByteBuf remaining) {
@@ -184,7 +208,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         position.set("steps", buf.readUnsignedShort());
         position.set("temperature", buf.readFloat());
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private void decodeAlarm(Position position, ByteBuf buf, ByteBuf remaining) {
@@ -192,7 +218,35 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         long alarmType = buf.readUnsignedInt();
         position.set(Position.KEY_ALARM, decodeAlarm(alarmType));
 
-        decodeData(position, remaining);
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
+    }
+
+    private void decodeMessage(Position position, ByteBuf buf, ByteBuf remaining) {
+        // Handle text messages and commands (data type 0x21)
+        if (buf.readableBytes() > 0) {
+            byte[] messageBytes = new byte[buf.readableBytes()];
+            buf.readBytes(messageBytes);
+            
+            // Try to decode as ASCII text first
+            String message = new String(messageBytes, java.nio.charset.StandardCharsets.US_ASCII).trim();
+            
+            // If it's not printable ASCII, log as hex
+            boolean isPrintable = message.chars().allMatch(c -> c >= 32 && c <= 126);
+            if (isPrintable && !message.isEmpty()) {
+                position.set("message", message);
+                LOGGER.info("Received text message: {}", message);
+            } else {
+                String hexMessage = ByteBufUtil.hexDump(messageBytes);
+                position.set("messageHex", hexMessage);
+                LOGGER.info("Received binary message: {}", hexMessage);
+            }
+        }
+        
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
     }
 
     private static String bytesToHex(byte[] bytes) {
@@ -250,7 +304,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     private void decodeData(Position position, ByteBuf buf) {
         int readableByte = buf.readableBytes();
 
-        if (readableByte < 3) {
+        if (readableByte < 2) {
             LOGGER.info("Unknown Data: {}", ByteBufUtil.hexDump(buf.readBytes(readableByte)));
             return;
         }
@@ -258,9 +312,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int dataType = buf.readUnsignedByte();
         int dataLength = buf.readUnsignedByte();
 
-        if (readableByte < dataLength) {
+        if (readableByte < dataLength + 2) {
+            LOGGER.warn("Insufficient data: readable={}, required={}", readableByte, dataLength + 2);
             return;
         }
+
+        LOGGER.debug("Processing data type: 0x{:02X} with length: {}", dataType, dataLength);
 
         switch (dataType) {
             case 0x00:
@@ -284,10 +341,15 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             case 0x08:
                 decodeMotion(position, buf.readSlice(dataLength), buf);
                 break;
+            case 0x21:
+                decodeMessage(position, buf.readSlice(dataLength), buf);
+                break;
             default:
                 LOGGER.info("Unknown Data Type: {} with length {}", dataType, dataLength);
                 buf.skipBytes(dataLength);
-                decodeData(position, buf);
+                if (buf.readableBytes() > 0) {
+                    decodeData(position, buf);
+                }
                 break;
         }
     }
