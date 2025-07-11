@@ -128,17 +128,11 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void setCoordinates(Position position, ByteBuf buf) {
         if (buf.readableBytes() >= 8) {
-            // Read raw coordinate values
-            int latitudeRaw = buf.readInt();
-            int longitudeRaw = buf.readInt();
+            // Read coordinates as floats (default format)
+            double latitude = buf.readFloat();
+            double longitude = buf.readFloat();
             
-            // Convert from the protocol's coordinate format
-            // Based on the working example: lat: 19.15103, lon: -96.12588
-            double latitude = latitudeRaw / 1000000.0;
-            double longitude = longitudeRaw / 1000000.0;
-            
-            LOGGER.debug("Raw coordinates: latRaw={}, lonRaw={}, converted: lat={}, lon={}", 
-                        latitudeRaw, longitudeRaw, latitude, longitude);
+            LOGGER.debug("Float coordinates: lat={}, lon={}", latitude, longitude);
             
             // Validate coordinate ranges before setting
             if (latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 && longitude <= 180.0) {
@@ -150,8 +144,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                     position.setValid(false);
                 }
             } else {
-                LOGGER.warn("Invalid coordinates: lat={}, lon={} (raw: {}, {})", 
-                           latitude, longitude, latitudeRaw, longitudeRaw);
+                LOGGER.warn("Invalid coordinates: lat={}, lon={}", latitude, longitude);
                 position.setValid(false);
             }
         }
@@ -249,6 +242,33 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private void decodeTextData(Position position, ByteBuf buf, ByteBuf remaining) {
+        // Handle data type 0xFF - usually text messages or status info
+        if (buf.readableBytes() > 0) {
+            byte[] textBytes = new byte[buf.readableBytes()];
+            buf.readBytes(textBytes);
+            
+            // Try to decode as ASCII text
+            String text = new String(textBytes, java.nio.charset.StandardCharsets.US_ASCII).trim();
+            
+            // Filter out non-printable characters and keep readable text
+            String cleanText = text.replaceAll("[\\x00-\\x1F\\x7F-\\x9F]", "");
+            
+            if (!cleanText.isEmpty()) {
+                position.set("textData", cleanText);
+                LOGGER.info("Received text data: {}", cleanText);
+            } else {
+                String hexData = ByteBufUtil.hexDump(textBytes);
+                position.set("textDataHex", hexData);
+                LOGGER.debug("Received binary text data: {}", hexData);
+            }
+        }
+        
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
+    }
+
     private static String bytesToHex(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
         for (byte b : bytes) {
@@ -313,6 +333,11 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int dataLength = buf.readUnsignedByte();
 
         if (readableByte < dataLength + 2) {
+            if (dataLength > 100) {
+                // If data length seems unreasonable, might be corrupted data
+                LOGGER.warn("Suspicious data length: {} bytes, skipping", dataLength);
+                return;
+            }
             LOGGER.warn("Insufficient data: readable={}, required={}", readableByte, dataLength + 2);
             return;
         }
@@ -343,6 +368,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                 break;
             case 0x21:
                 decodeMessage(position, buf.readSlice(dataLength), buf);
+                break;
+            case 0xFF:
+                decodeTextData(position, buf.readSlice(dataLength), buf);
                 break;
             default:
                 LOGGER.info("Unknown Data Type: {} with length {}", dataType, dataLength);
