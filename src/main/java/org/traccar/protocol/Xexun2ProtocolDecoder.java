@@ -298,7 +298,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int length = buf.readUnsignedShort() & 0x03ff; // extract only the lower 10 bits
         int checksum = buf.readUnsignedShort();
 
+        LOGGER.debug("Message parsing: type=0x{:02X}, index={}, length={}, checksum=0x{:04X}", 
+                    type, index, length, checksum);
+
         if (checksum != Checksum.ip(buf.nioBuffer(buf.readerIndex(), length))) {
+            LOGGER.warn("Checksum mismatch: expected=0x{:04X}, calculated=0x{:04X}", 
+                       checksum, Checksum.ip(buf.nioBuffer(buf.readerIndex(), length)));
             return null;
         }
 
@@ -332,13 +337,18 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int dataType = buf.readUnsignedByte();
         int dataLength = buf.readUnsignedByte();
 
+        LOGGER.debug("Data parsing: readable={}, dataType=0x{:02X}, dataLength={}", 
+                    readableByte, dataType, dataLength);
+
         if (readableByte < dataLength + 2) {
-            if (dataLength > 100) {
+            if (dataLength > 100 || dataLength < 0) {
                 // If data length seems unreasonable, might be corrupted data
-                LOGGER.warn("Suspicious data length: {} bytes, skipping", dataLength);
+                LOGGER.warn("Suspicious data length: {} bytes, skipping. Remaining data: {}", 
+                           dataLength, ByteBufUtil.hexDump(buf.readBytes(Math.min(readableByte, 20))));
                 return;
             }
-            LOGGER.warn("Insufficient data: readable={}, required={}", readableByte, dataLength + 2);
+            LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{:02X}, dataLength={}", 
+                       readableByte, dataLength + 2, dataType, dataLength);
             return;
         }
 
