@@ -269,6 +269,32 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private void decodeDeviceInfo(Position position, ByteBuf buf, ByteBuf remaining) {
+        // Handle data type 0x20 - device configuration/info data
+        if (buf.readableBytes() > 0) {
+            byte[] infoBytes = new byte[buf.readableBytes()];
+            buf.readBytes(infoBytes);
+            
+            // Try to decode as ASCII text (device info is usually text)
+            String info = new String(infoBytes, java.nio.charset.StandardCharsets.US_ASCII);
+            
+            // Extract readable parts (device info often contains mixed binary/text)
+            String[] parts = info.split("\\|");
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i].trim();
+                if (part.length() > 3 && part.matches(".*[A-Za-z0-9].*")) {
+                    position.set("deviceInfo" + (i > 0 ? i : ""), part);
+                }
+            }
+            
+            LOGGER.debug("Received device info: {}", info.replaceAll("[\\x00-\\x1F\\x7F-\\x9F]", ""));
+        }
+        
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
+    }
+
     private static String bytesToHex(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
         for (byte b : bytes) {
@@ -341,10 +367,10 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                     readableByte, dataType, dataLength);
 
         if (readableByte < dataLength + 2) {
-            if (dataLength > 100 || dataLength < 0) {
+            if (dataLength > 50 || dataLength < 0) {
                 // If data length seems unreasonable, might be corrupted data
-                LOGGER.warn("Suspicious data length: {} bytes, skipping. Remaining data: {}", 
-                           dataLength, ByteBufUtil.hexDump(buf.readBytes(Math.min(readableByte, 20))));
+                LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{:02X}, Remaining data: {}", 
+                           dataLength, dataType, ByteBufUtil.hexDump(buf.readBytes(Math.min(readableByte, 20))));
                 return;
             }
             LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{:02X}, dataLength={}", 
@@ -375,6 +401,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                 break;
             case 0x08:
                 decodeMotion(position, buf.readSlice(dataLength), buf);
+                break;
+            case 0x20:
+                decodeDeviceInfo(position, buf.readSlice(dataLength), buf);
                 break;
             case 0x21:
                 decodeMessage(position, buf.readSlice(dataLength), buf);
