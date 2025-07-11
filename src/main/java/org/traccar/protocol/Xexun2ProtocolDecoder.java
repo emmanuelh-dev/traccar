@@ -422,28 +422,33 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private void decodeData(Position position, ByteBuf buf) {
-        int readableByte = buf.readableBytes();
-
-        if (readableByte < 2) {
-            LOGGER.info("Unknown Data: {}", ByteBufUtil.hexDump(buf.readBytes(readableByte)));
+        // Check if we have enough bytes to continue
+        if (buf.readableBytes() < 2) {
+            // If there are remaining bytes but less than 2, log them and return
+            if (buf.readableBytes() > 0) {
+                LOGGER.debug("Remaining data too short: {} bytes - {}", 
+                           buf.readableBytes(), ByteBufUtil.hexDump(buf.readBytes(buf.readableBytes())));
+            }
             return;
         }
 
+        int readableByte = buf.readableBytes();
         int dataType = buf.readUnsignedByte();
         int dataLength = buf.readUnsignedByte();
 
         LOGGER.debug("Data parsing: readable={}, dataType=0x{:02X}, dataLength={}", 
                     readableByte, dataType, dataLength);
 
-        if (readableByte < dataLength + 2) {
+        // Check if we have enough bytes for the data payload (we already read 2 bytes for type and length)
+        if (buf.readableBytes() < dataLength) {
             if (dataLength > 150 || dataLength < 0) {
                 // If data length seems unreasonable, might be corrupted data
                 LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{:02X}, Remaining data: {}", 
-                           dataLength, dataType, ByteBufUtil.hexDump(buf.readBytes(Math.min(readableByte, 20))));
+                           dataLength, dataType, ByteBufUtil.hexDump(buf.readBytes(Math.min(buf.readableBytes(), 20))));
                 return;
             }
             LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{:02X}, dataLength={}", 
-                       readableByte, dataLength + 2, dataType, dataLength);
+                       buf.readableBytes(), dataLength, dataType, dataLength);
             return;
         }
 
