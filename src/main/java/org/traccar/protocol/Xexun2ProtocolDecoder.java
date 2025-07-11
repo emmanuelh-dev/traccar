@@ -50,14 +50,33 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private String decodeAlarm(long value) {
+        // Based on the protocol documentation
         if (BitUtil.check(value, 0)) {
             return Position.ALARM_SOS;
         }
-        if (BitUtil.check(value, 1)) {
-            return Position.ALARM_REMOVING;
+        if (BitUtil.check(value, 9)) {
+            return Position.ALARM_REMOVING; // Strap removal
         }
-        if (BitUtil.check(value, 15)) {
-            return Position.ALARM_FALL_DOWN;
+        if (BitUtil.check(value, 10)) {
+            return "strapConnection";
+        }
+        if (BitUtil.check(value, 12)) {
+            return "curfewAnchorMotion";
+        }
+        if (BitUtil.check(value, 22)) {
+            return Position.ALARM_POWER_OFF; // Car external power failure
+        }
+        if (BitUtil.check(value, 23)) {
+            return Position.ALARM_FALL_DOWN; // Fall alarm
+        }
+        if (BitUtil.check(value, 24)) {
+            return "accStartAlarm";
+        }
+        if (BitUtil.check(value, 25)) {
+            return "doorAlarm";
+        }
+        if (BitUtil.check(value, 26)) {
+            return "ephemerisDownloadFail";
         }
         return null;
     }
@@ -270,25 +289,75 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private void decodeDeviceInfo(Position position, ByteBuf buf, ByteBuf remaining) {
-        // Handle data type 0x20 - device configuration/info data
+        // Handle data type 0x20 - Version Data (device configuration/info data)
         if (buf.readableBytes() > 0) {
-            byte[] infoBytes = new byte[buf.readableBytes()];
-            buf.readBytes(infoBytes);
+            // Read status byte
+            int status = buf.readUnsignedByte();
+            position.set("deviceStatus", status);
+            position.set("autoRestart", BitUtil.check(status, 0));
+            position.set("manualRestart", BitUtil.check(status, 1));
+            position.set("requestServerSync", BitUtil.check(status, 3));
             
-            // Try to decode as ASCII text (device info is usually text)
-            String info = new String(infoBytes, java.nio.charset.StandardCharsets.US_ASCII);
-            
-            // Extract readable parts (device info often contains mixed binary/text)
-            String[] parts = info.split("\\|");
-            for (int i = 0; i < parts.length; i++) {
-                String part = parts[i].trim();
-                if (part.length() > 3 && part.matches(".*[A-Za-z0-9].*")) {
-                    position.set("deviceInfo" + (i > 0 ? i : ""), part);
+            // Read version info (32 bytes)
+            if (buf.readableBytes() >= 32) {
+                byte[] versionBytes = new byte[32];
+                buf.readBytes(versionBytes);
+                String version = new String(versionBytes, java.nio.charset.StandardCharsets.US_ASCII).trim();
+                String[] versionParts = version.split("\\|");
+                if (versionParts.length >= 2) {
+                    position.set("upperVersion", versionParts[0]);
+                    position.set("lowerVersion", versionParts[1]);
                 }
             }
             
-            LOGGER.debug("Received device info: {}", info.replaceAll("[\\x00-\\x1F\\x7F-\\x9F]", ""));
+            // Read ICCID (10 bytes BCD)
+            if (buf.readableBytes() >= 10) {
+                byte[] iccidBytes = new byte[10];
+                buf.readBytes(iccidBytes);
+                String iccid = ByteBufUtil.hexDump(iccidBytes);
+                position.set("iccid", iccid);
+            }
+            
+            // Read product model length and data
+            if (buf.readableBytes() >= 1) {
+                int modelLength = buf.readUnsignedByte();
+                if (buf.readableBytes() >= modelLength) {
+                    byte[] modelBytes = new byte[modelLength];
+                    buf.readBytes(modelBytes);
+                    String model = new String(modelBytes, java.nio.charset.StandardCharsets.US_ASCII);
+                    position.set("productModel", model);
+                }
+            }
+            
+            LOGGER.info("Device info received - Status: {}", status);
         }
+        
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
+    }
+
+    private void decodeTof(Position position, ByteBuf buf, ByteBuf remaining) {
+        // Handle data type 0x03 - TOF (Time of Flight) data
+        position.setTime(new Date(buf.readUnsignedInt() * 1000));
+        long relatedId = buf.readUnsignedInt();
+        int distance = buf.readUnsignedShort(); // Distance in cm
+        int power = buf.readUnsignedShort();
+        
+        position.set("relatedId", relatedId);
+        position.set("distance", distance);
+        position.set("power", power);
+        
+        if (remaining.readableBytes() > 0) {
+            decodeData(position, remaining);
+        }
+    }
+
+    private void decodeFingerprint(Position position, ByteBuf buf, ByteBuf remaining) {
+        // Handle data type 0x07 - Fingerprint punch-in data
+        position.setTime(new Date(buf.readUnsignedInt() * 1000));
+        long fingerprintId = buf.readUnsignedInt();
+        position.set("fingerprintId", fingerprintId);
         
         if (remaining.readableBytes() > 0) {
             decodeData(position, remaining);
@@ -367,7 +436,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                     readableByte, dataType, dataLength);
 
         if (readableByte < dataLength + 2) {
-            if (dataLength > 50 || dataLength < 0) {
+            if (dataLength > 150 || dataLength < 0) {
                 // If data length seems unreasonable, might be corrupted data
                 LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{:02X}, Remaining data: {}", 
                            dataLength, dataType, ByteBufUtil.hexDump(buf.readBytes(Math.min(readableByte, 20))));
@@ -390,6 +459,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             case 0x02:
                 decodeLbs(position, buf.readSlice(dataLength), buf);
                 break;
+            case 0x03:
+                decodeTof(position, buf.readSlice(dataLength), buf);
+                break;
             case 0x04:
                 decodeAlarm(position, buf.readSlice(dataLength), buf);
                 break;
@@ -398,6 +470,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                 break;
             case 0x06:
                 decodeDeviceStatus(position, buf.readSlice(dataLength), buf);
+                break;
+            case 0x07:
+                decodeFingerprint(position, buf.readSlice(dataLength), buf);
                 break;
             case 0x08:
                 decodeMotion(position, buf.readSlice(dataLength), buf);
