@@ -589,10 +589,6 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
 
         ByteBuf buf = (ByteBuf) msg;
-        
-        // Log the complete raw message for analysis
-        LOGGER.info("Raw message received (length={}): {}", buf.readableBytes(), 
-                   ByteBufUtil.hexDump(buf.slice(0, Math.min(buf.readableBytes(), 200))));
 
         buf.skipBytes(2); // flag
 
@@ -600,11 +596,16 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int index = buf.readUnsignedShort();
 
         ByteBuf imei = buf.readSlice(8);
+        String imeiStr = ByteBufUtil.hexDump(imei).substring(0, 15);
         DeviceSession deviceSession = getDeviceSession(
-                channel, remoteAddress, ByteBufUtil.hexDump(imei).substring(0, 15));
+                channel, remoteAddress, imeiStr);
         if (deviceSession == null) {
             return null;
         }
+
+        // Log the complete raw message for analysis
+        LOGGER.info("Raw message received (length={}) from device {}: {}", buf.readableBytes(), 
+                   imeiStr, ByteBufUtil.hexDump(buf.slice(0, Math.min(buf.readableBytes(), 200))));
 
         int length = buf.readUnsignedShort() & 0x03ff; // extract only the lower 10 bits
         int checksum = buf.readUnsignedShort();
@@ -679,19 +680,21 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
         // If no valid GPS was found in the main decode, use last known location
         if (!hasValidGps && (position.getLatitude() == 0 && position.getLongitude() == 0)) {
-            LOGGER.debug("No valid GPS found, attempting to get last known location");
+            LOGGER.debug("No valid GPS found for device {}, attempting to get last known location", imeiStr);
             getLastLocation(position, null);
             if (position.getLatitude() != 0 || position.getLongitude() != 0) {
-                LOGGER.info("Used last known location: lat={}, lon={}", 
-                           position.getLatitude(), position.getLongitude());
+                LOGGER.info("Used last known location for device {}: lat={}, lon={}", 
+                           imeiStr, position.getLatitude(), position.getLongitude());
             }
         }
 
         // Log final coordinates for debugging
         if (position.getLatitude() != 0 || position.getLongitude() != 0) {
-            LOGGER.info("Final position: lat={}, lon={}, valid={}, time={}", 
-                       position.getLatitude(), position.getLongitude(), 
-                       position.getValid(), position.getFixTime());
+            LOGGER.info("Final position for device {}: lat={}, lon={}, valid={}, time={}, hasValidGps={}", 
+                       imeiStr, position.getLatitude(), position.getLongitude(), 
+                       position.getValid(), position.getFixTime(), hasValidGps);
+        } else {
+            LOGGER.warn("No coordinates found for device {}", imeiStr);
         }
 
         return position;
