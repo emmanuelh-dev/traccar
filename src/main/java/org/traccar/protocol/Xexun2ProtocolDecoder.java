@@ -432,6 +432,15 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             return;
         }
 
+        // Check if we've reached the end flag (0xFAAF)
+        if (buf.readableBytes() >= 2) {
+            int possibleFlag = buf.getUnsignedShort(buf.readerIndex());
+            if (possibleFlag == FLAG) {
+                LOGGER.debug("Reached end flag, stopping data parsing");
+                return;
+            }
+        }
+
         int readableByte = buf.readableBytes();
         int dataType = buf.readUnsignedByte();
         int dataLength = buf.readUnsignedByte();
