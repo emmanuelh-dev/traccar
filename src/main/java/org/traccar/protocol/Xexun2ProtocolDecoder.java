@@ -287,18 +287,23 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             LOGGER.info("Coordinate formats - Float: lat={}, lon={}, FloatNMEA: lat={}, lon={}, Fixed: lat={}, lon={}, NMEA: lat={}, lon={}, HexBCD: lat={}, lon={}", 
                        lat1, lon1, lat1nmea, lon1nmea, lat2, lon2, lat3, lon3, lat4, lon4);
             
+            // Smart format detection: Check if float values are in NMEA range (> 100) or GPS range (< 90)
+            boolean isLikelyNmeaFormat = (Math.abs(lat1) > 100 || Math.abs(lon1) > 100);
+            
+            LOGGER.debug("Format detection: lat1={}, lon1={}, isLikelyNmeaFormat={}", lat1, lon1, isLikelyNmeaFormat);
+            
             // Try to determine which format is valid for Mexico region
-            if (isValidMexicoCoordinate(lat1nmea, lon1nmea)) {
+            if (isLikelyNmeaFormat && isValidMexicoCoordinate(lat1nmea, lon1nmea)) {
                 position.setLatitude(lat1nmea);
                 position.setLongitude(lon1nmea);
                 position.setValid(true);
-                LOGGER.info("Using FLOAT NMEA coordinates: lat={}, lon={}", lat1nmea, lon1nmea);
+                LOGGER.info("Using FLOAT NMEA coordinates (detected NMEA format): lat={}, lon={}", lat1nmea, lon1nmea);
                 return;
-            } else if (isValidMexicoCoordinate(lat1, lon1)) {
+            } else if (!isLikelyNmeaFormat && isValidMexicoCoordinate(lat1, lon1)) {
                 position.setLatitude(lat1);
                 position.setLongitude(lon1);
                 position.setValid(true);
-                LOGGER.info("Using FLOAT coordinates: lat={}, lon={}", lat1, lon1);
+                LOGGER.info("Using FLOAT coordinates (detected GPS format): lat={}, lon={}", lat1, lon1);
                 return;
             } else if (isValidMexicoCoordinate(lat2, lon2)) {
                 position.setLatitude(lat2);
