@@ -87,11 +87,16 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             return;
         }
         
+        LOGGER.debug("GPS data length: {}, content: {}", buf.readableBytes(), 
+                    ByteBufUtil.hexDump(buf.slice(buf.readerIndex(), Math.min(buf.readableBytes(), 32))));
+        
         position.setTime(new Date(buf.readUnsignedInt() * 1000));
         
         // Check if we have coordinate data
         if (buf.readableBytes() >= 8) {
             setCoordinates(position, buf);
+        } else {
+            LOGGER.debug("No coordinate data in GPS packet, only {} bytes remaining", buf.readableBytes());
         }
         
         // Read additional GPS data if available
@@ -153,6 +158,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             return;
         }
         
+        LOGGER.debug("LBS data length: {}, content: {}", buf.readableBytes(), 
+                    ByteBufUtil.hexDump(buf.slice(buf.readerIndex(), Math.min(buf.readableBytes(), 32))));
+        
         position.setTime(new Date(buf.readUnsignedInt() * 1000));
         
         if (buf.readableBytes() >= 13) { // MCC(2) + MNC(2) + LAC(4) + CID(4) + RSSI(1)
@@ -162,6 +170,9 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             long cid = buf.readUnsignedInt();
             int rssi = buf.readUnsignedByte();
             
+            LOGGER.debug("LBS cell tower: MCC={}, MNC={}, LAC={}, CID={}, RSSI={}", 
+                        mcc, mnc, lac, cid, rssi);
+            
             CellTower cellTower = CellTower.from(mcc, mnc, lac, cid, rssi);
             if (position.getNetwork() == null) {
                 position.setNetwork(new Network(cellTower));
@@ -170,9 +181,14 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             }
         }
 
-        // Check if coordinates are included
-        if (buf.readableBytes() >= 8) {
+        // Only try to read coordinates if there's exactly 8 bytes left AND it looks like coordinate data
+        if (buf.readableBytes() == 8) {
+            LOGGER.debug("LBS has coordinate data, attempting to decode");
             setCoordinates(position, buf);
+        } else if (buf.readableBytes() > 8) {
+            LOGGER.debug("LBS has extra data ({} bytes), skipping coordinate parsing to avoid corruption", buf.readableBytes());
+            // Skip remaining bytes as they might not be coordinates
+            buf.skipBytes(buf.readableBytes());
         }
 
         if (position.getLatitude() != 0 || position.getLongitude() != 0) {
@@ -186,6 +202,13 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void setCoordinates(Position position, ByteBuf buf) {
         if (buf.readableBytes() >= 8) {
+            // Store original position for debugging
+            int originalReaderIndex = buf.readerIndex();
+            
+            // Log the 8 bytes we're about to interpret as coordinates
+            ByteBuf coordBuf = buf.slice(buf.readerIndex(), 8);
+            LOGGER.debug("Coordinate bytes: {}", ByteBufUtil.hexDump(coordBuf));
+            
             // Try reading as float first
             double latitude = buf.readFloat();
             double longitude = buf.readFloat();
@@ -204,7 +227,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             
             // If float coordinates are invalid, try as fixed point coordinates
             // Reset buffer position to try different format
-            buf.readerIndex(buf.readerIndex() - 8);
+            buf.readerIndex(originalReaderIndex);
             
             // Try reading as 32-bit integers (degrees * 10^6 format)
             int latInt = buf.readInt();
@@ -226,7 +249,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             }
             
             // If still invalid, try as little-endian format
-            buf.readerIndex(buf.readerIndex() - 8);
+            buf.readerIndex(originalReaderIndex);
             int latLE = Integer.reverseBytes(buf.readInt());
             int lonLE = Integer.reverseBytes(buf.readInt());
             
@@ -245,8 +268,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                 }
             }
             
+            // All formats failed - log detailed information but don't mark as invalid
             LOGGER.warn("All coordinate formats failed - Float: lat={}, lon={}, Fixed: lat={}, lon={}, LE: lat={}, lon={}", 
                        latitude, longitude, latDegrees, lonDegrees, latLE_degrees, lonLE_degrees);
+            
+            // Skip the 8 bytes we couldn't interpret
+            buf.readerIndex(originalReaderIndex + 8);
             position.setValid(false);
         }
     }
