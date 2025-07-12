@@ -246,27 +246,138 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void setCoordinates(Position position, ByteBuf buf) {
         if (buf.readableBytes() >= 8) {
-            // According to protocol documentation, GPS coordinates are stored as FLOAT values
-            // Read latitude and longitude as 32-bit IEEE 754 floating point numbers
-            double latitude = buf.readFloat();
-            double longitude = buf.readFloat();
+            // Log the raw bytes to understand the actual format
+            byte[] coordBytes = new byte[8];
+            buf.getBytes(buf.readerIndex(), coordBytes);
+            LOGGER.info("Raw coordinate bytes: {}", ByteBufUtil.hexDump(coordBytes));
             
-            LOGGER.debug("GPS coordinates from protocol: lat={}, lon={}", latitude, longitude);
+            // Try multiple coordinate formats
+            buf.markReaderIndex();
             
-            // Validate coordinate ranges
-            if (latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 && longitude <= 180.0) {
-                if (latitude != 0.0 || longitude != 0.0) {
-                    position.setLatitude(latitude);
-                    position.setLongitude(longitude);
-                    position.setValid(true);
-                    LOGGER.debug("Successfully set GPS coordinates: lat={}, lon={}", latitude, longitude);
-                    return;
-                }
+            // Format 1: IEEE 754 FLOAT (original assumption)
+            double lat1 = buf.readFloat();
+            double lon1 = buf.readFloat();
+            buf.resetReaderIndex();
+            
+            // Format 2: Fixed point (degrees * 1000000)
+            int latFixed = buf.readInt();
+            int lonFixed = buf.readInt();
+            double lat2 = latFixed / 1000000.0;
+            double lon2 = lonFixed / 1000000.0;
+            buf.resetReaderIndex();
+            
+            // Format 3: NMEA format (DDMM.MMMM * 10000)
+            int latNmea = buf.readInt();
+            int lonNmea = buf.readInt();
+            double lat3 = convertNmeaToDecimal(latNmea);
+            double lon3 = convertNmeaToDecimal(lonNmea);
+            buf.resetReaderIndex();
+            
+            // Format 4: Hexadecimal BCD format
+            double lat4 = convertHexBcdToDecimal(coordBytes, 0);
+            double lon4 = convertHexBcdToDecimal(coordBytes, 4);
+            
+            // Consume the 8 bytes
+            buf.skipBytes(8);
+            
+            LOGGER.info("Coordinate formats - Float: lat={}, lon={}, Fixed: lat={}, lon={}, NMEA: lat={}, lon={}, HexBCD: lat={}, lon={}", 
+                       lat1, lon1, lat2, lon2, lat3, lon3, lat4, lon4);
+            
+            // Try to determine which format is valid for Mexico region
+            if (isValidMexicoCoordinate(lat1, lon1)) {
+                position.setLatitude(lat1);
+                position.setLongitude(lon1);
+                position.setValid(true);
+                LOGGER.info("Using FLOAT coordinates: lat={}, lon={}", lat1, lon1);
+                return;
+            } else if (isValidMexicoCoordinate(lat2, lon2)) {
+                position.setLatitude(lat2);
+                position.setLongitude(lon2);
+                position.setValid(true);
+                LOGGER.info("Using FIXED coordinates: lat={}, lon={}", lat2, lon2);
+                return;
+            } else if (isValidMexicoCoordinate(lat3, lon3)) {
+                position.setLatitude(lat3);
+                position.setLongitude(lon3);
+                position.setValid(true);
+                LOGGER.info("Using NMEA coordinates: lat={}, lon={}", lat3, lon3);
+                return;
+            } else if (isValidMexicoCoordinate(lat4, lon4)) {
+                position.setLatitude(lat4);
+                position.setLongitude(lon4);
+                position.setValid(true);
+                LOGGER.info("Using HexBCD coordinates: lat={}, lon={}", lat4, lon4);
+                return;
             }
             
-            LOGGER.warn("Invalid GPS coordinates received: lat={}, lon={}", latitude, longitude);
+            // If Mexico coordinates fail, try general validation
+            if (isValidCoordinate(lat1, lon1)) {
+                position.setLatitude(lat1);
+                position.setLongitude(lon1);
+                position.setValid(true);
+                LOGGER.info("Using FLOAT coordinates (general): lat={}, lon={}", lat1, lon1);
+                return;
+            } else if (isValidCoordinate(lat2, lon2)) {
+                position.setLatitude(lat2);
+                position.setLongitude(lon2);
+                position.setValid(true);
+                LOGGER.info("Using FIXED coordinates (general): lat={}, lon={}", lat2, lon2);
+                return;
+            } else if (isValidCoordinate(lat3, lon3)) {
+                position.setLatitude(lat3);
+                position.setLongitude(lon3);
+                position.setValid(true);
+                LOGGER.info("Using NMEA coordinates (general): lat={}, lon={}", lat3, lon3);
+                return;
+            } else if (isValidCoordinate(lat4, lon4)) {
+                position.setLatitude(lat4);
+                position.setLongitude(lon4);
+                position.setValid(true);
+                LOGGER.info("Using HexBCD coordinates (general): lat={}, lon={}", lat4, lon4);
+                return;
+            }
+            
+            LOGGER.warn("All coordinate formats failed - Raw bytes: {}", ByteBufUtil.hexDump(coordBytes));
         } else {
             LOGGER.debug("Insufficient data for GPS coordinates: {} bytes available", buf.readableBytes());
+        }
+    }
+
+    private boolean isValidCoordinate(double lat, double lon) {
+        return lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0 && 
+               (lat != 0.0 || lon != 0.0) && !Double.isNaN(lat) && !Double.isNaN(lon);
+    }
+
+    private boolean isValidMexicoCoordinate(double lat, double lon) {
+        // Mexico coordinates: latitude roughly 14-33, longitude roughly -118 to -86
+        return lat >= 14.0 && lat <= 33.0 && lon >= -118.0 && lon <= -86.0 && 
+               !Double.isNaN(lat) && !Double.isNaN(lon);
+    }
+
+    private double convertNmeaToDecimal(int nmeaValue) {
+        // Convert DDMM.MMMM format to decimal degrees
+        // Example: 1905.84765625 -> 19 degrees + 5.84765625 minutes
+        double value = Math.abs(nmeaValue) / 100.0;
+        int degrees = (int) value;
+        double minutes = (value - degrees) * 100.0;
+        double result = degrees + minutes / 60.0;
+        return nmeaValue < 0 ? -result : result;
+    }
+
+    private double convertHexBcdToDecimal(byte[] data, int offset) {
+        // Convert 4 bytes of hexadecimal BCD to decimal coordinate
+        if (offset + 4 > data.length) return 0.0;
+        
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 4; i++) {
+            sb.append(String.format("%02X", data[offset + i] & 0xFF));
+        }
+        
+        try {
+            long value = Long.parseLong(sb.toString(), 16);
+            return value / 1000000.0;
+        } catch (NumberFormatException e) {
+            return 0.0;
         }
     }
 
@@ -478,6 +589,10 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
 
         ByteBuf buf = (ByteBuf) msg;
+        
+        // Log the complete raw message for analysis
+        LOGGER.info("Raw message received (length={}): {}", buf.readableBytes(), 
+                   ByteBufUtil.hexDump(buf.slice(0, Math.min(buf.readableBytes(), 200))));
 
         buf.skipBytes(2); // flag
 
