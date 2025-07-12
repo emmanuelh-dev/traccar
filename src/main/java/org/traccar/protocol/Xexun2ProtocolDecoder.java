@@ -49,6 +49,29 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private static int calculateChecksum(byte[] data, int len) {
+        int sum = 0;
+        int j = 0;
+        
+        for (; len > 1; len--) {
+            sum += data[j++] & 0xff;
+            if ((sum & 0x80000000) > 0) {
+                sum = (sum & 0xffff) + (sum >> 16);
+            }
+        }
+        
+        if (len == 1) {
+            sum += data[data.length - 1] & 0xff;
+        }
+        
+        while ((sum >> 16) > 0) {
+            sum = (sum & 0xffff) + (sum >> 16);
+        }
+        
+        sum = (sum == 0xffff) ? sum & 0xffff : (~sum) & 0xffff;
+        return sum;
+    }
+
     private String decodeAlarm(long value) {
         // Based on the protocol documentation
         if (BitUtil.check(value, 0)) {
@@ -90,44 +113,72 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         LOGGER.debug("GPS data length: {}, content: {}", buf.readableBytes(), 
                     ByteBufUtil.hexDump(buf.slice(buf.readerIndex(), Math.min(buf.readableBytes(), 32))));
         
+        // According to protocol documentation for GPS Data Type ID: 00
+        // 1. Timestamp (U32, 4 bytes)
         position.setTime(new Date(buf.readUnsignedInt() * 1000));
         
-        // Check if we have coordinate data
+        // 2. Latitude (FLOAT, 4 bytes) + 3. Longitude (FLOAT, 4 bytes)
         if (buf.readableBytes() >= 8) {
             setCoordinates(position, buf);
-        } else {
-            LOGGER.debug("No coordinate data in GPS packet, only {} bytes remaining", buf.readableBytes());
         }
         
-        // Read additional GPS data if available
+        // 4. Altitude (FLOAT, 4 bytes)
         if (buf.readableBytes() >= 4) {
             position.setAltitude(buf.readFloat());
         }
+        
+        // 5. Number of satellites (U8, 1 byte)
         if (buf.readableBytes() >= 1) {
             position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
         }
+        
+        // 6. Average signal-to-noise ratio (U8, 1 byte)
         if (buf.readableBytes() >= 1) {
             position.set("signalAvg", buf.readUnsignedByte());
         }
+        
+        // 7. Speed, 10*(km/h) (U16, 2 bytes)
         if (buf.readableBytes() >= 2) {
             position.setSpeed(UnitsConverter.knotsFromKph((double) buf.readUnsignedShort() / 10.0));
         }
+        
+        // 8. Angle, 10*(degree) (U16, 2 bytes)
         if (buf.readableBytes() >= 2) {
             position.setCourse((double) buf.readUnsignedShort() / 10.0);
         }
+        
+        // 9. Ephemeris synchronization flag (U8, 1 byte)
         if (buf.readableBytes() >= 1) {
             position.set("ephemerisSync", buf.readUnsignedByte());
         }
+        
+        // 10. Seconds to successful location (U8, 1 byte)
         if (buf.readableBytes() >= 1) {
             position.set("trackingSeconds", buf.readUnsignedByte());
         }
+        
+        // 11. Dilution of Precision (U16, 2 bytes)
         if (buf.readableBytes() >= 2) {
             position.setAccuracy((double) buf.readUnsignedShort() / 10.0);
         }
+        
+        // 12. Strongest signal-to-noise ratio of four satellites (U8[4], 4 bytes)
         if (buf.readableBytes() >= 4) {
             byte[] satelliteSignals = new byte[4];
             buf.readBytes(satelliteSignals);
             position.set("satelliteSignals", bytesToHex(satelliteSignals));
+        }
+        
+        // 13. GPS status (U8, 1 byte) - 1=normal, 2=modified, 4=differential, 5=sub-meter
+        if (buf.readableBytes() >= 1) {
+            int gpsStatus = buf.readUnsignedByte();
+            position.set("gpsStatus", gpsStatus);
+            position.setValid(gpsStatus >= 1); // Valid if status is 1 or higher
+        }
+        
+        // 14. Differential delay (U8, 1 byte) - only for RTK
+        if (buf.readableBytes() >= 1) {
+            position.set("differentialDelay", buf.readUnsignedByte());
         }
 
         if (remaining.readableBytes() > 0) {
@@ -181,18 +232,11 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             }
         }
 
-        // Only try to read coordinates if there's exactly 8 bytes left AND it looks like coordinate data
-        if (buf.readableBytes() == 8) {
-            LOGGER.debug("LBS has coordinate data, attempting to decode");
-            setCoordinates(position, buf);
-        } else if (buf.readableBytes() > 8) {
-            LOGGER.debug("LBS has extra data ({} bytes), skipping coordinate parsing to avoid corruption", buf.readableBytes());
-            // Skip remaining bytes as they might not be coordinates
+        // Skip any remaining bytes in LBS data - don't try to interpret as coordinates
+        // Coordinates should only come from GPS data blocks (type 0x00)
+        if (buf.readableBytes() > 0) {
+            LOGGER.debug("Skipping {} bytes of additional LBS data", buf.readableBytes());
             buf.skipBytes(buf.readableBytes());
-        }
-
-        if (position.getLatitude() != 0 || position.getLongitude() != 0) {
-            position.setOutdated(false);
         }
 
         if (remaining.readableBytes() > 0) {
@@ -202,79 +246,27 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void setCoordinates(Position position, ByteBuf buf) {
         if (buf.readableBytes() >= 8) {
-            // Store original position for debugging
-            int originalReaderIndex = buf.readerIndex();
-            
-            // Log the 8 bytes we're about to interpret as coordinates
-            ByteBuf coordBuf = buf.slice(buf.readerIndex(), 8);
-            LOGGER.debug("Coordinate bytes: {}", ByteBufUtil.hexDump(coordBuf));
-            
-            // Try reading as float first
+            // According to protocol documentation, GPS coordinates are stored as FLOAT values
+            // Read latitude and longitude as 32-bit IEEE 754 floating point numbers
             double latitude = buf.readFloat();
             double longitude = buf.readFloat();
             
-            LOGGER.debug("Raw float coordinates: lat={}, lon={}", latitude, longitude);
+            LOGGER.debug("GPS coordinates from protocol: lat={}, lon={}", latitude, longitude);
             
-            // Check if coordinates are in valid range
+            // Validate coordinate ranges
             if (latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 && longitude <= 180.0) {
-                if (latitude != 0 || longitude != 0) {
+                if (latitude != 0.0 || longitude != 0.0) {
                     position.setLatitude(latitude);
                     position.setLongitude(longitude);
                     position.setValid(true);
+                    LOGGER.debug("Successfully set GPS coordinates: lat={}, lon={}", latitude, longitude);
                     return;
                 }
             }
             
-            // If float coordinates are invalid, try as fixed point coordinates
-            // Reset buffer position to try different format
-            buf.readerIndex(originalReaderIndex);
-            
-            // Try reading as 32-bit integers (degrees * 10^6 format)
-            int latInt = buf.readInt();
-            int lonInt = buf.readInt();
-            
-            double latDegrees = latInt / 1000000.0;
-            double lonDegrees = lonInt / 1000000.0;
-            
-            LOGGER.debug("Fixed point coordinates: lat={}, lon={} (raw: {}, {})", 
-                        latDegrees, lonDegrees, latInt, lonInt);
-            
-            if (latDegrees >= -90.0 && latDegrees <= 90.0 && lonDegrees >= -180.0 && lonDegrees <= 180.0) {
-                if (latDegrees != 0 || lonDegrees != 0) {
-                    position.setLatitude(latDegrees);
-                    position.setLongitude(lonDegrees);
-                    position.setValid(true);
-                    return;
-                }
-            }
-            
-            // If still invalid, try as little-endian format
-            buf.readerIndex(originalReaderIndex);
-            int latLE = Integer.reverseBytes(buf.readInt());
-            int lonLE = Integer.reverseBytes(buf.readInt());
-            
-            double latLE_degrees = latLE / 1000000.0;
-            double lonLE_degrees = lonLE / 1000000.0;
-            
-            LOGGER.debug("Little-endian coordinates: lat={}, lon={} (raw: {}, {})", 
-                        latLE_degrees, lonLE_degrees, latLE, lonLE);
-            
-            if (latLE_degrees >= -90.0 && latLE_degrees <= 90.0 && lonLE_degrees >= -180.0 && lonLE_degrees <= 180.0) {
-                if (latLE_degrees != 0 || lonLE_degrees != 0) {
-                    position.setLatitude(latLE_degrees);
-                    position.setLongitude(lonLE_degrees);
-                    position.setValid(true);
-                    return;
-                }
-            }
-            
-            // All formats failed - log detailed information but don't mark as invalid
-            LOGGER.warn("All coordinate formats failed - Float: lat={}, lon={}, Fixed: lat={}, lon={}, LE: lat={}, lon={}", 
-                       latitude, longitude, latDegrees, lonDegrees, latLE_degrees, lonLE_degrees);
-            
-            // Skip the 8 bytes we couldn't interpret
-            buf.readerIndex(originalReaderIndex + 8);
-            position.setValid(false);
+            LOGGER.warn("Invalid GPS coordinates received: lat={}, lon={}", latitude, longitude);
+        } else {
+            LOGGER.debug("Insufficient data for GPS coordinates: {} bytes available", buf.readableBytes());
         }
     }
 
@@ -507,7 +499,11 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
         // Create a slice for checksum calculation to avoid reading beyond message boundary
         ByteBuf checksumBuf = buf.slice(buf.readerIndex(), Math.min(length, buf.readableBytes()));
-        int calculatedChecksum = Checksum.ip(checksumBuf.nioBuffer());
+        
+        // Use the protocol-specific checksum algorithm
+        byte[] checksumData = new byte[checksumBuf.readableBytes()];
+        checksumBuf.getBytes(0, checksumData);
+        int calculatedChecksum = calculateChecksum(checksumData, checksumData.length);
         
         if (checksum != calculatedChecksum) {
             LOGGER.warn("Checksum mismatch: expected=0x{}, calculated=0x{}, length={}, data={}", 
@@ -526,9 +522,48 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         Position position = new Position(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
+        ByteBuf tempBuf = buf.duplicate(); // Create a copy for scanning
+        boolean hasValidGps = false;
+        
+        // Scan for GPS data first
+        while (tempBuf.readableBytes() >= 2) {
+            // Check for end flag
+            if (tempBuf.readableBytes() >= 2) {
+                int possibleFlag = tempBuf.getUnsignedShort(tempBuf.readerIndex());
+                if (possibleFlag == FLAG) {
+                    break;
+                }
+            }
+            
+            int dataType = tempBuf.readUnsignedByte();
+            if (tempBuf.readableBytes() < 1) break;
+            
+            int dataLength = tempBuf.readUnsignedByte();
+            if (dataLength > tempBuf.readableBytes()) break;
+            
+            if (dataType == 0x00 && dataLength >= 12) { // GPS data with timestamp + coordinates
+                LOGGER.debug("Found GPS data block with length {}", dataLength);
+                ByteBuf gpsData = tempBuf.readSlice(dataLength);
+                if (gpsData.readableBytes() >= 12) { // timestamp(4) + lat(4) + lon(4)
+                    position.setTime(new Date(gpsData.readUnsignedInt() * 1000));
+                    setCoordinates(position, gpsData);
+                    if (position.getLatitude() != 0 || position.getLongitude() != 0) {
+                        hasValidGps = true;
+                        LOGGER.debug("Extracted valid GPS coordinates in first pass: lat={}, lon={}", 
+                                   position.getLatitude(), position.getLongitude());
+                        break; // Use the first valid GPS data found
+                    }
+                }
+            } else {
+                tempBuf.skipBytes(dataLength);
+            }
+        }
+
+        // Now process all data blocks normally
         decodeData(position, buf);
 
-        if (position.getLatitude() == 0 && position.getLongitude() == 0) {
+        // If no valid GPS was found in the main decode, use last known location
+        if (!hasValidGps && (position.getLatitude() == 0 && position.getLongitude() == 0)) {
             getLastLocation(position, null);
         }
 
