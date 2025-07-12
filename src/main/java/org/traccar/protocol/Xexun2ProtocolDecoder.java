@@ -432,7 +432,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             return;
         }
 
-        // Check if we've reached the end flag (0xFAAF)
+        // Check if we've reached the end flag (0xFAAF) - check both possible positions
         if (buf.readableBytes() >= 2) {
             int possibleFlag = buf.getUnsignedShort(buf.readerIndex());
             if (possibleFlag == FLAG) {
@@ -440,9 +440,37 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                 return;
             }
         }
+        
+        // Also check if the first byte is 0xFA (start of end flag)
+        int firstByte = buf.getUnsignedByte(buf.readerIndex());
+        if (firstByte == 0xFA) {
+            // Check if this could be the start of the end flag
+            if (buf.readableBytes() >= 2) {
+                int possibleFlag = buf.getUnsignedShort(buf.readerIndex());
+                if (possibleFlag == FLAG) {
+                    LOGGER.debug("Reached end flag (0xFAAF), stopping data parsing");
+                    return;
+                }
+            } else if (buf.readableBytes() == 1) {
+                // Only one byte left and it's 0xFA, likely incomplete end flag
+                LOGGER.debug("Found partial end flag (0xFA), stopping data parsing");
+                return;
+            }
+        }
 
         int readableByte = buf.readableBytes();
         int dataType = buf.readUnsignedByte();
+        
+        // Additional safety check - if dataType is 0xFA, it's likely the start of end flag
+        if (dataType == 0xFA) {
+            // Check if next byte is 0xAF (completing the 0xFAAF flag)
+            if (buf.readableBytes() >= 1 && buf.getUnsignedByte(buf.readerIndex()) == 0xAF) {
+                LOGGER.debug("Detected end flag bytes (0xFAAF), stopping data parsing");
+                buf.readerIndex(buf.readerIndex() - 1); // Reset reader to before 0xFA
+                return;
+            }
+        }
+        
         int dataLength = buf.readUnsignedByte();
 
         LOGGER.debug("Data parsing: readable={}, dataType=0x{}, dataLength={}", 
@@ -454,14 +482,16 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             LOGGER.debug("Next bytes: {}", ByteBufUtil.hexDump(tempBuf));
         }
 
+        // Validate data length first
+        if (dataLength > 150 || dataLength < 0) {
+            // If data length seems unreasonable, might be corrupted data
+            LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{}, Remaining data: {}", 
+                       dataLength, String.format("%02X", dataType), ByteBufUtil.hexDump(buf.readBytes(Math.min(buf.readableBytes(), 20))));
+            return;
+        }
+        
         // Check if we have enough bytes for the data payload (we already read 2 bytes for type and length)
         if (buf.readableBytes() < dataLength) {
-            if (dataLength > 150 || dataLength < 0) {
-                // If data length seems unreasonable, might be corrupted data
-                LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{}, Remaining data: {}", 
-                           dataLength, String.format("%02X", dataType), ByteBufUtil.hexDump(buf.readBytes(Math.min(buf.readableBytes(), 20))));
-                return;
-            }
             LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{}, dataLength={}", 
                        buf.readableBytes(), dataLength, String.format("%02X", dataType), dataLength);
             return;
