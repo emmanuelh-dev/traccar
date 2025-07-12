@@ -679,7 +679,19 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
         // If no valid GPS was found in the main decode, use last known location
         if (!hasValidGps && (position.getLatitude() == 0 && position.getLongitude() == 0)) {
+            LOGGER.debug("No valid GPS found, attempting to get last known location");
             getLastLocation(position, null);
+            if (position.getLatitude() != 0 || position.getLongitude() != 0) {
+                LOGGER.info("Used last known location: lat={}, lon={}", 
+                           position.getLatitude(), position.getLongitude());
+            }
+        }
+
+        // Log final coordinates for debugging
+        if (position.getLatitude() != 0 || position.getLongitude() != 0) {
+            LOGGER.info("Final position: lat={}, lon={}, valid={}, time={}", 
+                       position.getLatitude(), position.getLongitude(), 
+                       position.getValid(), position.getFixTime());
         }
 
         return position;
