@@ -259,6 +259,10 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             double lon1 = buf.readFloat();
             buf.resetReaderIndex();
             
+            // Format 1b: Try FLOAT values as NMEA coordinates
+            double lat1nmea = convertNmeaFloatToDecimal((float)lat1);
+            double lon1nmea = convertNmeaFloatToDecimal((float)lon1);
+            
             // Format 2: Fixed point (degrees * 1000000)
             int latFixed = buf.readInt();
             int lonFixed = buf.readInt();
@@ -280,11 +284,17 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             // Consume the 8 bytes
             buf.skipBytes(8);
             
-            LOGGER.info("Coordinate formats - Float: lat={}, lon={}, Fixed: lat={}, lon={}, NMEA: lat={}, lon={}, HexBCD: lat={}, lon={}", 
-                       lat1, lon1, lat2, lon2, lat3, lon3, lat4, lon4);
+            LOGGER.info("Coordinate formats - Float: lat={}, lon={}, FloatNMEA: lat={}, lon={}, Fixed: lat={}, lon={}, NMEA: lat={}, lon={}, HexBCD: lat={}, lon={}", 
+                       lat1, lon1, lat1nmea, lon1nmea, lat2, lon2, lat3, lon3, lat4, lon4);
             
             // Try to determine which format is valid for Mexico region
-            if (isValidMexicoCoordinate(lat1, lon1)) {
+            if (isValidMexicoCoordinate(lat1nmea, lon1nmea)) {
+                position.setLatitude(lat1nmea);
+                position.setLongitude(lon1nmea);
+                position.setValid(true);
+                LOGGER.info("Using FLOAT NMEA coordinates: lat={}, lon={}", lat1nmea, lon1nmea);
+                return;
+            } else if (isValidMexicoCoordinate(lat1, lon1)) {
                 position.setLatitude(lat1);
                 position.setLongitude(lon1);
                 position.setValid(true);
@@ -311,7 +321,13 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             }
             
             // If Mexico coordinates fail, try general validation
-            if (isValidCoordinate(lat1, lon1)) {
+            if (isValidCoordinate(lat1nmea, lon1nmea)) {
+                position.setLatitude(lat1nmea);
+                position.setLongitude(lon1nmea);
+                position.setValid(true);
+                LOGGER.info("Using FLOAT NMEA coordinates (general): lat={}, lon={}", lat1nmea, lon1nmea);
+                return;
+            } else if (isValidCoordinate(lat1, lon1)) {
                 position.setLatitude(lat1);
                 position.setLongitude(lon1);
                 position.setValid(true);
@@ -356,12 +372,33 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private double convertNmeaToDecimal(int nmeaValue) {
         // Convert DDMM.MMMM format to decimal degrees
-        // Example: 1905.84765625 -> 19 degrees + 5.84765625 minutes
-        double value = Math.abs(nmeaValue) / 100.0;
-        int degrees = (int) value;
-        double minutes = (value - degrees) * 100.0;
+        // Example: 1907.7103 -> 19 degrees + 07.7103 minutes = 19.128505°
+        
+        // Handle both positive and negative values
+        boolean isNegative = nmeaValue < 0;
+        double value = Math.abs(nmeaValue);
+        
+        // For floating point NMEA format, divide by 100 to get degrees.minutes
+        double degreesMinutes = value / 100.0;
+        int degrees = (int) degreesMinutes;
+        double minutes = (degreesMinutes - degrees) * 100.0;
+        
         double result = degrees + minutes / 60.0;
-        return nmeaValue < 0 ? -result : result;
+        return isNegative ? -result : result;
+    }
+    
+    private double convertNmeaFloatToDecimal(float nmeaFloat) {
+        // Convert NMEA float format (DDMM.MMMM) to decimal degrees
+        // Example: 1907.7103 -> 19 degrees + 07.7103 minutes = 19.128505°
+        
+        boolean isNegative = nmeaFloat < 0;
+        double value = Math.abs(nmeaFloat);
+        
+        int degrees = (int) (value / 100.0);
+        double minutes = value - (degrees * 100.0);
+        
+        double result = degrees + minutes / 60.0;
+        return isNegative ? -result : result;
     }
 
     private double convertHexBcdToDecimal(byte[] data, int offset) {
@@ -421,6 +458,38 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         
         position.set("trackingSequence", buf.readUnsignedByte());
         position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
+        
+        // Check if there are additional bytes that might contain hidden coordinates
+        if (buf.readableBytes() >= 8) {
+            LOGGER.info("Device status has extra {} bytes, checking for hidden coordinates: {}", 
+                       buf.readableBytes(), ByteBufUtil.hexDump(buf.slice(buf.readerIndex(), Math.min(buf.readableBytes(), 16))));
+            
+            // Try to find coordinates in the additional data
+            while (buf.readableBytes() >= 8) {
+                byte[] possibleCoords = new byte[8];
+                buf.getBytes(buf.readerIndex(), possibleCoords);
+                
+                // Try as fixed point coordinates
+                int lat = ((possibleCoords[0] & 0xFF) << 24) | ((possibleCoords[1] & 0xFF) << 16) | 
+                         ((possibleCoords[2] & 0xFF) << 8) | (possibleCoords[3] & 0xFF);
+                int lon = ((possibleCoords[4] & 0xFF) << 24) | ((possibleCoords[5] & 0xFF) << 16) | 
+                         ((possibleCoords[6] & 0xFF) << 8) | (possibleCoords[7] & 0xFF);
+                
+                double latDecimal = lat / 1000000.0;
+                double lonDecimal = lon / 1000000.0;
+                
+                if (isValidMexicoCoordinate(latDecimal, lonDecimal)) {
+                    position.setLatitude(latDecimal);
+                    position.setLongitude(lonDecimal);
+                    position.setValid(true);
+                    LOGGER.info("Found hidden coordinates in device status: lat={}, lon={}", latDecimal, lonDecimal);
+                    buf.skipBytes(8);
+                    break;
+                }
+                
+                buf.skipBytes(1); // Move one byte and try again
+            }
+        }
     
         if (remaining.readableBytes() > 0) {
             decodeData(position, remaining);
@@ -685,6 +754,11 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
             if (position.getLatitude() != 0 || position.getLongitude() != 0) {
                 LOGGER.info("Used last known location for device {}: lat={}, lon={}", 
                            imeiStr, position.getLatitude(), position.getLongitude());
+                // Update the time to current time since device is sending data now
+                if (position.getFixTime() != null && position.getFixTime().before(new Date(System.currentTimeMillis() - 60000))) {
+                    position.setTime(new Date()); // Set current time for activity
+                    LOGGER.info("Updated timestamp to current time for device activity: {}", imeiStr);
+                }
             }
         }
 
@@ -694,7 +768,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
                        imeiStr, position.getLatitude(), position.getLongitude(), 
                        position.getValid(), position.getFixTime(), hasValidGps);
         } else {
-            LOGGER.warn("No coordinates found for device {}", imeiStr);
+            LOGGER.warn("No coordinates found for device {} - GPS blocks had empty coordinates, no last location available", imeiStr);
+        }
+
+        // Log device activity even without GPS
+        if (position.getAttributes() != null && !position.getAttributes().isEmpty()) {
+            LOGGER.info("Device {} activity: {}", imeiStr, position.getAttributes());
         }
 
         return position;
