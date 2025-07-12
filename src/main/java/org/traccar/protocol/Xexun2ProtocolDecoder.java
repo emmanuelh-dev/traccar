@@ -82,19 +82,48 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private void decodeGps(Position position, ByteBuf buf, ByteBuf remaining) {
+        if (buf.readableBytes() < 4) {
+            LOGGER.warn("GPS data too short: {} bytes", buf.readableBytes());
+            return;
+        }
+        
         position.setTime(new Date(buf.readUnsignedInt() * 1000));
-        setCoordinates(position, buf);
-        position.setAltitude(buf.readFloat());
-        position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
-        position.set("signalAvg", buf.readUnsignedByte());
-        position.setSpeed(UnitsConverter.knotsFromKph((double) buf.readUnsignedShort() / 10.0));
-        position.setCourse((double) buf.readUnsignedShort() / 10.0);
-        position.set("ephemerisSync", buf.readUnsignedByte());
-        position.set("trackingSeconds", buf.readUnsignedByte());
-        position.setAccuracy((double) buf.readUnsignedShort() / 10.0);
-        byte[] satelliteSignals = new byte[4];
-        buf.readBytes(satelliteSignals);
-        position.set("satelliteSignals", bytesToHex(satelliteSignals));
+        
+        // Check if we have coordinate data
+        if (buf.readableBytes() >= 8) {
+            setCoordinates(position, buf);
+        }
+        
+        // Read additional GPS data if available
+        if (buf.readableBytes() >= 4) {
+            position.setAltitude(buf.readFloat());
+        }
+        if (buf.readableBytes() >= 1) {
+            position.set(Position.KEY_SATELLITES, buf.readUnsignedByte());
+        }
+        if (buf.readableBytes() >= 1) {
+            position.set("signalAvg", buf.readUnsignedByte());
+        }
+        if (buf.readableBytes() >= 2) {
+            position.setSpeed(UnitsConverter.knotsFromKph((double) buf.readUnsignedShort() / 10.0));
+        }
+        if (buf.readableBytes() >= 2) {
+            position.setCourse((double) buf.readUnsignedShort() / 10.0);
+        }
+        if (buf.readableBytes() >= 1) {
+            position.set("ephemerisSync", buf.readUnsignedByte());
+        }
+        if (buf.readableBytes() >= 1) {
+            position.set("trackingSeconds", buf.readUnsignedByte());
+        }
+        if (buf.readableBytes() >= 2) {
+            position.setAccuracy((double) buf.readUnsignedShort() / 10.0);
+        }
+        if (buf.readableBytes() >= 4) {
+            byte[] satelliteSignals = new byte[4];
+            buf.readBytes(satelliteSignals);
+            position.set("satelliteSignals", bytesToHex(satelliteSignals));
+        }
 
         if (remaining.readableBytes() > 0) {
             decodeData(position, remaining);
@@ -119,19 +148,29 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private void decodeLbs(Position position, ByteBuf buf, ByteBuf remaining) {
+        if (buf.readableBytes() < 4) {
+            LOGGER.warn("LBS data too short: {} bytes", buf.readableBytes());
+            return;
+        }
+        
         position.setTime(new Date(buf.readUnsignedInt() * 1000));
-        int mcc = buf.readUnsignedShort();
-        int mnc = buf.readUnsignedShort();
-        int lac = buf.readInt();
-        long cid = buf.readUnsignedInt();
-        int rssi = buf.readUnsignedByte();
-        CellTower cellTower = CellTower.from(mcc, mnc, lac, cid, rssi);
-        if (position.getNetwork() == null) {
-            position.setNetwork(new Network(CellTower.from(mcc, mnc, lac, cid, rssi)));
-        } else {
-            position.getNetwork().setCellTowers(List.of(cellTower));
+        
+        if (buf.readableBytes() >= 13) { // MCC(2) + MNC(2) + LAC(4) + CID(4) + RSSI(1)
+            int mcc = buf.readUnsignedShort();
+            int mnc = buf.readUnsignedShort();
+            int lac = buf.readInt();
+            long cid = buf.readUnsignedInt();
+            int rssi = buf.readUnsignedByte();
+            
+            CellTower cellTower = CellTower.from(mcc, mnc, lac, cid, rssi);
+            if (position.getNetwork() == null) {
+                position.setNetwork(new Network(cellTower));
+            } else {
+                position.getNetwork().setCellTowers(List.of(cellTower));
+            }
         }
 
+        // Check if coordinates are included
         if (buf.readableBytes() >= 8) {
             setCoordinates(position, buf);
         }
@@ -147,25 +186,68 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
 
     private void setCoordinates(Position position, ByteBuf buf) {
         if (buf.readableBytes() >= 8) {
-            // Read coordinates as floats (default format)
+            // Try reading as float first
             double latitude = buf.readFloat();
             double longitude = buf.readFloat();
             
-            LOGGER.debug("Float coordinates: lat={}, lon={}", latitude, longitude);
+            LOGGER.debug("Raw float coordinates: lat={}, lon={}", latitude, longitude);
             
-            // Validate coordinate ranges before setting
+            // Check if coordinates are in valid range
             if (latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 && longitude <= 180.0) {
                 if (latitude != 0 || longitude != 0) {
                     position.setLatitude(latitude);
                     position.setLongitude(longitude);
                     position.setValid(true);
-                } else {
-                    position.setValid(false);
+                    return;
                 }
-            } else {
-                LOGGER.warn("Invalid coordinates: lat={}, lon={}", latitude, longitude);
-                position.setValid(false);
             }
+            
+            // If float coordinates are invalid, try as fixed point coordinates
+            // Reset buffer position to try different format
+            buf.readerIndex(buf.readerIndex() - 8);
+            
+            // Try reading as 32-bit integers (degrees * 10^6 format)
+            int latInt = buf.readInt();
+            int lonInt = buf.readInt();
+            
+            double latDegrees = latInt / 1000000.0;
+            double lonDegrees = lonInt / 1000000.0;
+            
+            LOGGER.debug("Fixed point coordinates: lat={}, lon={} (raw: {}, {})", 
+                        latDegrees, lonDegrees, latInt, lonInt);
+            
+            if (latDegrees >= -90.0 && latDegrees <= 90.0 && lonDegrees >= -180.0 && lonDegrees <= 180.0) {
+                if (latDegrees != 0 || lonDegrees != 0) {
+                    position.setLatitude(latDegrees);
+                    position.setLongitude(lonDegrees);
+                    position.setValid(true);
+                    return;
+                }
+            }
+            
+            // If still invalid, try as little-endian format
+            buf.readerIndex(buf.readerIndex() - 8);
+            int latLE = Integer.reverseBytes(buf.readInt());
+            int lonLE = Integer.reverseBytes(buf.readInt());
+            
+            double latLE_degrees = latLE / 1000000.0;
+            double lonLE_degrees = lonLE / 1000000.0;
+            
+            LOGGER.debug("Little-endian coordinates: lat={}, lon={} (raw: {}, {})", 
+                        latLE_degrees, lonLE_degrees, latLE, lonLE);
+            
+            if (latLE_degrees >= -90.0 && latLE_degrees <= 90.0 && lonLE_degrees >= -180.0 && lonLE_degrees <= 180.0) {
+                if (latLE_degrees != 0 || lonLE_degrees != 0) {
+                    position.setLatitude(latLE_degrees);
+                    position.setLongitude(lonLE_degrees);
+                    position.setValid(true);
+                    return;
+                }
+            }
+            
+            LOGGER.warn("All coordinate formats failed - Float: lat={}, lon={}, Fixed: lat={}, lon={}, LE: lat={}, lon={}", 
+                       latitude, longitude, latDegrees, lonDegrees, latLE_degrees, lonLE_degrees);
+            position.setValid(false);
         }
     }
 
@@ -396,10 +478,15 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         LOGGER.debug("Message parsing: type=0x{}, index={}, length={}, checksum=0x{}", 
                     String.format("%02X", type), index, length, String.format("%04X", checksum));
 
-        if (checksum != Checksum.ip(buf.nioBuffer(buf.readerIndex(), length))) {
-            LOGGER.warn("Checksum mismatch: expected=0x{}, calculated=0x{}", 
-                       String.format("%04X", checksum), String.format("%04X", Checksum.ip(buf.nioBuffer(buf.readerIndex(), length))));
-            return null;
+        // Create a slice for checksum calculation to avoid reading beyond message boundary
+        ByteBuf checksumBuf = buf.slice(buf.readerIndex(), Math.min(length, buf.readableBytes()));
+        int calculatedChecksum = Checksum.ip(checksumBuf.nioBuffer());
+        
+        if (checksum != calculatedChecksum) {
+            LOGGER.warn("Checksum mismatch: expected=0x{}, calculated=0x{}, length={}, data={}", 
+                       String.format("%04X", checksum), String.format("%04X", calculatedChecksum), 
+                       length, ByteBufUtil.hexDump(checksumBuf.slice(0, Math.min(32, checksumBuf.readableBytes()))));
+            // Don't return null, continue processing as data might still be valid
         }
 
         if (type == MSG_LOGIN) {
@@ -498,6 +585,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         }
 
         LOGGER.debug("Processing data type: 0x{} with length: {}", String.format("%02X", dataType), dataLength);
+        
+        // Log the actual data being processed for debugging
+        if (buf.readableBytes() >= dataLength) {
+            ByteBuf dataBuf = buf.slice(buf.readerIndex(), dataLength);
+            LOGGER.debug("Data content: {}", ByteBufUtil.hexDump(dataBuf));
+        }
 
         switch (dataType) {
             case 0x00:
