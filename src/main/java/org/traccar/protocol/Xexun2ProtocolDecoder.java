@@ -393,12 +393,12 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int length = buf.readUnsignedShort() & 0x03ff; // extract only the lower 10 bits
         int checksum = buf.readUnsignedShort();
 
-        LOGGER.debug("Message parsing: type=0x{:02X}, index={}, length={}, checksum=0x{:04X}", 
-                    type, index, length, checksum);
+        LOGGER.debug("Message parsing: type=0x{}, index={}, length={}, checksum=0x{}", 
+                    String.format("%02X", type), index, length, String.format("%04X", checksum));
 
         if (checksum != Checksum.ip(buf.nioBuffer(buf.readerIndex(), length))) {
-            LOGGER.warn("Checksum mismatch: expected=0x{:04X}, calculated=0x{:04X}", 
-                       checksum, Checksum.ip(buf.nioBuffer(buf.readerIndex(), length)));
+            LOGGER.warn("Checksum mismatch: expected=0x{}, calculated=0x{}", 
+                       String.format("%04X", checksum), String.format("%04X", Checksum.ip(buf.nioBuffer(buf.readerIndex(), length))));
             return null;
         }
 
@@ -436,23 +436,29 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         int dataType = buf.readUnsignedByte();
         int dataLength = buf.readUnsignedByte();
 
-        LOGGER.debug("Data parsing: readable={}, dataType=0x{:02X}, dataLength={}", 
-                    readableByte, dataType, dataLength);
+        LOGGER.debug("Data parsing: readable={}, dataType=0x{}, dataLength={}", 
+                    readableByte, String.format("%02X", dataType), dataLength);
+        
+        // Log the next few bytes to help debug data structure issues
+        if (buf.readableBytes() >= 4) {
+            ByteBuf tempBuf = buf.slice(buf.readerIndex(), Math.min(buf.readableBytes(), 16));
+            LOGGER.debug("Next bytes: {}", ByteBufUtil.hexDump(tempBuf));
+        }
 
         // Check if we have enough bytes for the data payload (we already read 2 bytes for type and length)
         if (buf.readableBytes() < dataLength) {
             if (dataLength > 150 || dataLength < 0) {
                 // If data length seems unreasonable, might be corrupted data
-                LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{:02X}, Remaining data: {}", 
-                           dataLength, dataType, ByteBufUtil.hexDump(buf.readBytes(Math.min(buf.readableBytes(), 20))));
+                LOGGER.warn("Suspicious data length: {} bytes, skipping. DataType: 0x{}, Remaining data: {}", 
+                           dataLength, String.format("%02X", dataType), ByteBufUtil.hexDump(buf.readBytes(Math.min(buf.readableBytes(), 20))));
                 return;
             }
-            LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{:02X}, dataLength={}", 
-                       buf.readableBytes(), dataLength, dataType, dataLength);
+            LOGGER.warn("Insufficient data: readable={}, required={}, dataType=0x{}, dataLength={}", 
+                       buf.readableBytes(), dataLength, String.format("%02X", dataType), dataLength);
             return;
         }
 
-        LOGGER.debug("Processing data type: 0x{:02X} with length: {}", dataType, dataLength);
+        LOGGER.debug("Processing data type: 0x{} with length: {}", String.format("%02X", dataType), dataLength);
 
         switch (dataType) {
             case 0x00:
