@@ -51,21 +51,14 @@ public class Event extends Message {
     public static final String TYPE_DEVICE_MOVING = "deviceMoving";
     public static final String TYPE_DEVICE_STOPPED = "deviceStopped";
 
-    public static final String TYPE_DEVICE_OVERSPEED = "deviceOverspeed";
-    public static final String TYPE_DEVICE_FUEL_DROP = "deviceFuelDrop";
-    public static final String TYPE_DEVICE_FUEL_INCREASE = "deviceFuelIncrease";
-
     public static final String TYPE_GEOFENCE_ENTER = "geofenceEnter";
     public static final String TYPE_GEOFENCE_EXIT = "geofenceExit";
 
     public static final String TYPE_ALARM = "alarm";
 
-    public static final String TYPE_IGNITION_ON = "ignitionOn";
-    public static final String TYPE_IGNITION_OFF = "ignitionOff";
+    // Vehicle-related event types removed for person tracking focus
 
-    public static final String TYPE_MAINTENANCE = "maintenance";
     public static final String TYPE_TEXT_MESSAGE = "textMessage";
-    public static final String TYPE_DRIVER_CHANGED = "driverChanged";
     public static final String TYPE_MEDIA = "media";
 
     private Date eventTime;
@@ -98,14 +91,9 @@ public class Event extends Message {
         this.geofenceId = geofenceId;
     }
 
-    private long maintenanceId = 0;
-
-    public long getMaintenanceId() {
-        return maintenanceId;
-    }
-
-    public void setMaintenanceId(long maintenanceId) {
-        this.maintenanceId = maintenanceId;
-    }
+    // Maintenance-related fields removed for person tracking focus
+    // private long maintenanceId = 0;
+    // public long getMaintenanceId() { return maintenanceId; }
+    // public void setMaintenanceId(long maintenanceId) { this.maintenanceId = maintenanceId; }
 
 }

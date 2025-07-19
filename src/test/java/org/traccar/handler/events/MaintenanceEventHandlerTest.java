@@ -1,9 +1,12 @@
+// MaintenanceEventHandlerTest removed for person tracking focus
+// Original implementation commented out:
+/*
 package org.traccar.handler.events;
 
 import org.junit.jupiter.api.Test;
 import org.traccar.BaseTest;
 import org.traccar.model.Event;
-import org.traccar.model.Maintenance;
+// import org.traccar.model.Maintenance; // Removed for person tracking focus
 import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
 
@@ -43,8 +46,8 @@ public class MaintenanceEventHandlerTest extends BaseTest {
         when(maintenance.getStart()).thenReturn(10000.0);
         when(maintenance.getPeriod()).thenReturn(2000.0);
 
-        List<Event> events = new ArrayList<>();
- 
+        List<Event> events = new ArrayList<>(); 
+
         lastPosition.set(Position.KEY_TOTAL_DISTANCE, 1999);
         position.set(Position.KEY_TOTAL_DISTANCE, 2001);
         eventHandler.analyzePosition(position, events::add);
@@ -68,3 +71,4 @@ public class MaintenanceEventHandlerTest extends BaseTest {
     }
 
 }
+*/

@@ -78,10 +78,11 @@ public class EventsReportProvider {
             for (Event event : events) {
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
-                    long maintenanceId = event.getMaintenanceId();
+                    // long maintenanceId = event.getMaintenanceId();
                     if ((geofenceId == 0 || reportUtils.getObject(userId, Geofence.class, geofenceId) != null)
-                            && (maintenanceId == 0
-                            || reportUtils.getObject(userId, Maintenance.class, maintenanceId) != null)) {
+                            // && (maintenanceId == 0
+                            // || reportUtils.getObject(userId, Maintenance.class, maintenanceId) != null)
+                            ) {
                        result.add(event);
                     }
                 }
@@ -107,7 +108,7 @@ public class EventsReportProvider {
                 Event event = iterator.next();
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
-                    long maintenanceId = event.getMaintenanceId();
+                    // long maintenanceId = event.getMaintenanceId();
                     if (geofenceId != 0) {
                         Geofence geofence = reportUtils.getObject(userId, Geofence.class, geofenceId);
                         if (geofence != null) {
@@ -115,14 +116,14 @@ public class EventsReportProvider {
                         } else {
                             iterator.remove();
                         }
-                    } else if (maintenanceId != 0) {
-                        Maintenance maintenance = reportUtils.getObject(userId, Maintenance.class, maintenanceId);
-                        if (maintenance != null) {
-                            maintenanceNames.put(maintenanceId, maintenance.getName());
-                        } else {
-                            iterator.remove();
-                        }
-                    }
+                    } // else if (maintenanceId != 0) {
+                    //     Maintenance maintenance = reportUtils.getObject(userId, Maintenance.class, maintenanceId);
+                    //     if (maintenance != null) {
+                    //         maintenanceNames.put(maintenanceId, maintenance.getName());
+                    //     } else {
+                    //         iterator.remove();
+                    //     }
+                    // }
                 } else {
                     iterator.remove();
                 }

@@ -148,9 +148,9 @@ public class DeviceResource extends BaseObjectResource<Device> {
             if (entity.getTotalDistance() != null) {
                 position.getAttributes().put(Position.KEY_TOTAL_DISTANCE, entity.getTotalDistance());
             }
-            if (entity.getHours() != null) {
-                position.getAttributes().put(Position.KEY_HOURS, entity.getHours());
-            }
+            // if (entity.getHours() != null) {
+            //     position.getAttributes().put(Position.KEY_HOURS, entity.getHours());
+            // }
             position.setId(storage.addObject(position, new Request(new Columns.Exclude("id"))));
 
             Device device = new Device();

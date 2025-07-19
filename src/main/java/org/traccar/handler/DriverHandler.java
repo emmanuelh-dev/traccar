@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Removed for person tracking focus - vehicle driver handling not needed for people
+/*
 package org.traccar.handler;
 
 import jakarta.inject.Inject;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
-import org.traccar.model.Driver;
+// import org.traccar.model.Driver; // Removed for person tracking focus
 import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
 
@@ -45,3 +47,4 @@ public class DriverHandler extends BasePositionHandler {
     }
 
 }
+*/

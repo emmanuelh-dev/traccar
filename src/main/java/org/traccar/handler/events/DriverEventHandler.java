@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Removed for person tracking focus - vehicle driver tracking not needed
+/*
 package org.traccar.handler.events;
 
 import jakarta.inject.Inject;
@@ -52,3 +54,4 @@ public class DriverEventHandler extends BaseEventHandler {
     }
 
 }
+*/

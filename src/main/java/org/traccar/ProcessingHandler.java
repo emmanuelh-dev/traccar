@@ -29,8 +29,8 @@ import org.traccar.handler.ComputedAttributesHandler;
 import org.traccar.handler.CopyAttributesHandler;
 import org.traccar.handler.DatabaseHandler;
 import org.traccar.handler.DistanceHandler;
-import org.traccar.handler.DriverHandler;
-import org.traccar.handler.EngineHoursHandler;
+// import org.traccar.handler.DriverHandler; // Removed for person tracking focus
+// import org.traccar.handler.EngineHoursHandler; // Removed for person tracking focus
 import org.traccar.handler.FilterHandler;
 import org.traccar.handler.GeocoderHandler;
 import org.traccar.handler.GeofenceHandler;
@@ -46,11 +46,11 @@ import org.traccar.handler.events.AlarmEventHandler;
 import org.traccar.handler.events.BaseEventHandler;
 import org.traccar.handler.events.BehaviorEventHandler;
 import org.traccar.handler.events.CommandResultEventHandler;
-import org.traccar.handler.events.DriverEventHandler;
-import org.traccar.handler.events.FuelEventHandler;
+// import org.traccar.handler.events.DriverEventHandler; // Removed for person tracking focus
+// import org.traccar.handler.events.FuelEventHandler; // Removed for person tracking focus
 import org.traccar.handler.events.GeofenceEventHandler;
 import org.traccar.handler.events.IgnitionEventHandler;
-import org.traccar.handler.events.MaintenanceEventHandler;
+// import org.traccar.handler.events.MaintenanceEventHandler; // Removed for person tracking focus
 import org.traccar.handler.events.MediaEventHandler;
 import org.traccar.handler.events.MotionEventHandler;
 import org.traccar.handler.events.OverspeedEventHandler;
@@ -107,8 +107,8 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 SpeedLimitHandler.class,
                 MotionHandler.class,
                 ComputedAttributesHandler.Late.class,
-                EngineHoursHandler.class,
-                DriverHandler.class,
+                // EngineHoursHandler.class, // Removed for person tracking focus
+                // DriverHandler.class, // Removed for person tracking focus
                 CopyAttributesHandler.class,
                 PositionForwardingHandler.class,
                 DatabaseHandler.class)
@@ -121,13 +121,13 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 CommandResultEventHandler.class,
                 OverspeedEventHandler.class,
                 BehaviorEventHandler.class,
-                FuelEventHandler.class,
+                // FuelEventHandler.class, // Removed for person tracking focus
                 MotionEventHandler.class,
                 GeofenceEventHandler.class,
                 AlarmEventHandler.class,
-                IgnitionEventHandler.class,
-                MaintenanceEventHandler.class,
-                DriverEventHandler.class)
+                IgnitionEventHandler.class)
+                // MaintenanceEventHandler.class, // Removed for person tracking focus
+                // DriverEventHandler.class // Removed for person tracking focus
                 .map((clazz) -> (BaseEventHandler) injector.getInstance(clazz))
                 .filter(Objects::nonNull)
                 .toList();

@@ -16,6 +16,9 @@
  */
 package org.traccar.api.resource;
 
+// Driver resource removed for person tracking focus
+// Original implementation commented out:
+/*
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -34,3 +37,4 @@ public class DriverResource extends ExtendedObjectResource<Driver> {
     }
 
 }
+*/

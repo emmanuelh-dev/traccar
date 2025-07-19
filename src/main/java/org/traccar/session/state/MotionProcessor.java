@@ -37,9 +37,9 @@ public final class MotionProcessor {
 
                 double distance = position.getDouble(Position.KEY_TOTAL_DISTANCE) - state.getMotionDistance();
                 Boolean ignition = null;
-                if (tripsConfig.getUseIgnition() && position.hasAttribute(Position.KEY_IGNITION)) {
-                    ignition = position.getBoolean(Position.KEY_IGNITION);
-                }
+        // if (tripsConfig.getUseIgnition() && position.hasAttribute(Position.KEY_IGNITION)) {
+        //     ignition = position.getBoolean(Position.KEY_IGNITION);
+        // }
 
                 boolean generateEvent = false;
                 if (newState) {

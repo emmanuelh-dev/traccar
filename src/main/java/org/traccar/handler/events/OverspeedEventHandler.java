@@ -69,10 +69,10 @@ public class OverspeedEventHandler extends BaseEventHandler {
 
         double speedLimit = AttributeUtil.lookup(cacheManager, Keys.EVENT_OVERSPEED_LIMIT, deviceId);
 
-        double positionSpeedLimit = position.getDouble(Position.KEY_SPEED_LIMIT);
-        if (positionSpeedLimit > 0) {
-            speedLimit = positionSpeedLimit;
-        }
+        // double positionSpeedLimit = position.getDouble(Position.KEY_SPEED_LIMIT);
+        // if (positionSpeedLimit > 0) {
+        //     speedLimit = positionSpeedLimit;
+        // }
 
         double geofenceSpeedLimit = 0;
         long overspeedGeofenceId = 0;

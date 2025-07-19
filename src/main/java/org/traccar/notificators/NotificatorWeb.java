@@ -50,7 +50,7 @@ public final class NotificatorWeb extends Notificator {
         copy.setEventTime(event.getEventTime());
         copy.setPositionId(event.getPositionId());
         copy.setGeofenceId(event.getGeofenceId());
-        copy.setMaintenanceId(event.getMaintenanceId());
+        // copy.setMaintenanceId(event.getMaintenanceId());
         copy.getAttributes().putAll(event.getAttributes());
 
         var message = notificationFormatter.formatMessage(notification, user, event, position, "short");

@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Removed for person tracking focus - engine hours not applicable for people
+/*
 package org.traccar.handler;
 
 import jakarta.inject.Inject;
@@ -47,3 +49,4 @@ public class EngineHoursHandler extends BasePositionHandler {
     }
 
 }
+*/

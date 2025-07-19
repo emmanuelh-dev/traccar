@@ -1,4 +1,7 @@
 /*
+ * Driver model removed for person tracking focus
+ * Original implementation commented out:
+ *
  * Copyright 2017 Anton Tananaev (anton@traccar.org)
  * Copyright 2017 Andrey Kunitsyn (andrey@traccar.org)
  *
@@ -14,6 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
 package org.traccar.model;
 
 import org.traccar.storage.StorageName;
@@ -42,3 +46,4 @@ public class Driver extends ExtendedModel {
     }
 
 }
+*/

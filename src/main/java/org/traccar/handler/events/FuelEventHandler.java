@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Removed for person tracking focus - fuel monitoring not needed for people
+/*
 package org.traccar.handler.events;
 
 import jakarta.inject.Inject;
@@ -69,3 +71,4 @@ public class FuelEventHandler extends BaseEventHandler {
     }
 
 }
+*/

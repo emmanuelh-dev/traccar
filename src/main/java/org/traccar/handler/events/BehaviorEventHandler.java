@@ -46,11 +46,11 @@ public class BehaviorEventHandler extends BaseEventHandler {
                     / (position.getFixTime().getTime() - lastPosition.getFixTime().getTime());
             if (accelerationThreshold != 0 && acceleration >= accelerationThreshold) {
                 Event event = new Event(Event.TYPE_ALARM, position);
-                event.set(Position.KEY_ALARM, Position.ALARM_ACCELERATION);
+                // event.set(Position.KEY_ALARM, Position.ALARM_ACCELERATION);
                 callback.eventDetected(event);
             } else if (brakingThreshold != 0 && acceleration <= -brakingThreshold) {
                 Event event = new Event(Event.TYPE_ALARM, position);
-                event.set(Position.KEY_ALARM, Position.ALARM_BRAKING);
+                // event.set(Position.KEY_ALARM, Position.ALARM_BRAKING);
                 callback.eventDetected(event);
             }
         }

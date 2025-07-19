@@ -68,13 +68,5 @@ public class StopReportItem extends BaseReportItem {
         this.duration = duration;
     }
 
-    private long engineHours; // milliseconds
-
-    public long getEngineHours() {
-        return engineHours;
-    }
-
-    public void setEngineHours(long engineHours) {
-        this.engineHours = engineHours;
-    }
+    // Engine hours field removed for person tracking focus
 }

@@ -61,10 +61,7 @@ tags:
     description: Sending commands to devices and stored command management
   - name: Attributes
     description: Computed attributes management
-  - name: Drivers
-    description: Drivers management
-  - name: Maintenance
-    description: Maintenance management
+  # Drivers and Maintenance tags removed for person tracking focus
   - name: Calendars
     description: Calendar management
   - name: Statistics
@@ -1516,208 +1513,8 @@ paths:
         '204':
           description: No Content
           content: {}
-  /drivers:
-    get:
-      summary: Fetch a list of Drivers
-      description: Without params, it returns a list of Drivers the user has access to
-      tags:
-        - Drivers
-      parameters:
-        - name: all
-          in: query
-          description: Can only be used by admins or managers to fetch all entities
-          schema:
-            type: boolean
-        - name: userId
-          in: query
-          description: Standard users can use this only with their own _userId_
-          schema:
-            type: integer
-        - name: deviceId
-          in: query
-          description: >-
-            Standard users can use this only with _deviceId_s, they have access
-            to
-          schema:
-            type: integer
-        - name: groupId
-          in: query
-          description: >-
-            Standard users can use this only with _groupId_s, they have access
-            to
-          schema:
-            type: integer
-        - name: refresh
-          in: query
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Driver'
-    post:
-      summary: Create a Driver
-      tags:
-        - Drivers
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Driver'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Driver'
-      x-codegen-request-body-name: body
-  /drivers/{id}:
-    put:
-      summary: Update a Driver
-      tags:
-        - Drivers
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Driver'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Driver'
-      x-codegen-request-body-name: body
-    delete:
-      summary: Delete a Driver
-      tags:
-        - Drivers
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: No Content
-          content: {}
-  /maintenance:
-    get:
-      summary: Fetch a list of Maintenance
-      description: Without params, it returns a list of Maintenance the user has access to
-      tags:
-        - Maintenance
-      parameters:
-        - name: all
-          in: query
-          description: Can only be used by admins or managers to fetch all entities
-          schema:
-            type: boolean
-        - name: userId
-          in: query
-          description: Standard users can use this only with their own _userId_
-          schema:
-            type: integer
-        - name: deviceId
-          in: query
-          description: >-
-            Standard users can use this only with _deviceId_s, they have access
-            to
-          schema:
-            type: integer
-        - name: groupId
-          in: query
-          description: >-
-            Standard users can use this only with _groupId_s, they have access
-            to
-          schema:
-            type: integer
-        - name: refresh
-          in: query
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Maintenance'
-    post:
-      summary: Create a Maintenance
-      tags:
-        - Maintenance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Maintenance'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Maintenance'
-      x-codegen-request-body-name: body
-  /maintenance/{id}:
-    put:
-      summary: Update a Maintenance
-      tags:
-        - Maintenance
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Maintenance'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Maintenance'
-      x-codegen-request-body-name: body
-    delete:
-      summary: Delete a Maintenance
-      tags:
-        - Maintenance
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: No Content
-          content: {}
+  # Driver APIs removed for person tracking focus
+  # Maintenance APIs removed for person tracking focus
 components:
   schemas:
     Position:
@@ -2037,20 +1834,14 @@ components:
           type: integer
         deviceName:
           type: string
-        maxSpeed:
-          type: number
-          description: in knots
+        # maxSpeed field removed for person tracking focus
         averageSpeed:
           type: number
           description: in knots
         distance:
           type: number
           description: in meters
-        spentFuel:
-          type: number
-          description: in liters
-        engineHours:
-          type: integer
+        # Vehicle-related fields removed for person tracking focus
     ReportTrips:
       type: object
       properties:
@@ -2058,18 +1849,14 @@ components:
           type: integer
         deviceName:
           type: string
-        maxSpeed:
-          type: number
-          description: in knots
+        # maxSpeed field removed for person tracking focus
         averageSpeed:
           type: number
           description: in knots
         distance:
           type: number
           description: in meters
-        spentFuel:
-          type: number
-          description: in liters
+        # Vehicle-related fields removed for person tracking focus
         duration:
           type: integer
         startTime:
@@ -2092,10 +1879,6 @@ components:
           type: number
         endLon:
           type: number
-        driverUniqueId:
-          type: integer
-        driverName:
-          type: string
     ReportStops:
       type: object
       properties:
@@ -2119,11 +1902,7 @@ components:
           type: string
           description: in IS0 8601 format. eg. `1963-11-22T18:30:00Z`
           format: date-time
-        spentFuel:
-          type: number
-          description: in liters
-        engineHours:
-          type: integer
+        # Vehicle-related fields removed for person tracking focus
     Statistics:
       type: object
       properties:
@@ -2178,34 +1957,8 @@ components:
         type:
           type: string
           description: String|Number|Boolean
-    Driver:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        uniqueId:
-          type: string
-        attributes:
-          type: object
-          properties: {}
-    Maintenance:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        type:
-          type: string
-        start:
-          type: number
-        period:
-          type: number
-        attributes:
-          type: object
-          properties: {}
+    # Driver schema removed for person tracking focus
+    # Maintenance schema removed for person tracking focus
   parameters:
     entityId:
       name: id
@@ -2319,12 +2072,7 @@ components:
           schema:
             $ref: '#/components/schemas/Attribute'
       required: true
-    Driver:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Driver'
-      required: true
+    # Driver request body removed for person tracking focus
     Command:
       content:
         application/json:
@@ -2337,12 +2085,7 @@ components:
           schema:
             $ref: '#/components/schemas/Notification'
       required: true
-    Maintenance:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Maintenance'
-      required: true
+    # Maintenance request body removed for person tracking focus
   securitySchemes:
     BasicAuth:
       type: http

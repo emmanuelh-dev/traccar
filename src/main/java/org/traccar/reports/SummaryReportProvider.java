@@ -93,9 +93,7 @@ public class SummaryReportProvider {
                 if (first == null) {
                     first = position;
                 }
-                if (position.getSpeed() > result.getMaxSpeed()) {
-                    result.setMaxSpeed(position.getSpeed());
-                }
+                // Max speed tracking removed for person tracking focus
                 last = position;
             }
         }
@@ -103,25 +101,9 @@ public class SummaryReportProvider {
         if (first != null && last != null) {
             boolean ignoreOdometer = config.getBoolean(Keys.REPORT_IGNORE_ODOMETER);
             result.setDistance(PositionUtil.calculateDistance(first, last, !ignoreOdometer));
-            result.setSpentFuel(reportUtils.calculateFuel(first, last));
+            // Fuel and engine hours calculation removed for person tracking focus
 
-            if (first.hasAttribute(Position.KEY_HOURS) && last.hasAttribute(Position.KEY_HOURS)) {
-                result.setStartHours(first.getLong(Position.KEY_HOURS));
-                result.setEndHours(last.getLong(Position.KEY_HOURS));
-                long engineHours = result.getEngineHours();
-                if (engineHours > 0) {
-                    result.setAverageSpeed(UnitsConverter.knotsFromMps(result.getDistance() * 1000 / engineHours));
-                }
-            }
-
-            if (!ignoreOdometer
-                    && first.getDouble(Position.KEY_ODOMETER) != 0 && last.getDouble(Position.KEY_ODOMETER) != 0) {
-                result.setStartOdometer(first.getDouble(Position.KEY_ODOMETER));
-                result.setEndOdometer(last.getDouble(Position.KEY_ODOMETER));
-            } else {
-                result.setStartOdometer(first.getDouble(Position.KEY_TOTAL_DISTANCE));
-                result.setEndOdometer(last.getDouble(Position.KEY_TOTAL_DISTANCE));
-            }
+            // Odometer readings removed for person tracking focus
 
             result.setStartTime(first.getFixTime());
             result.setEndTime(last.getFixTime());

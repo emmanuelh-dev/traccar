@@ -174,7 +174,7 @@ public class Xexun2ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_CHARGE, BitUtil.check(status, 7));
         
         position.set("trackingSequence", buf.readUnsignedByte());
-        position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
+        // position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
     
         decodeData(position, remaining);
     }

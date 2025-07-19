@@ -462,7 +462,7 @@ public class Xexun3ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_CHARGE, BitUtil.check(status, 7));
         
         position.set("trackingSequence", buf.readUnsignedByte());
-        position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
+        // position.set(Position.KEY_FUEL_LEVEL, buf.readUnsignedByte());
         
         // Check if there are additional bytes that might contain hidden coordinates
         if (buf.readableBytes() >= 8) {

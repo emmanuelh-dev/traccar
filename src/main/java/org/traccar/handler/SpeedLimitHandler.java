@@ -39,7 +39,7 @@ public class SpeedLimitHandler extends BasePositionHandler {
                 new SpeedLimitProvider.SpeedLimitProviderCallback() {
             @Override
             public void onSuccess(double speedLimit) {
-                position.set(Position.KEY_SPEED_LIMIT, speedLimit);
+                // position.set(Position.KEY_SPEED_LIMIT, speedLimit);
                 callback.processed(false);
             }
 

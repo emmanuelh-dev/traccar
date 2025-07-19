@@ -64,44 +64,11 @@ public class BaseReportItem {
         this.averageSpeed = averageSpeed;
     }
 
-    private double maxSpeed;
+    // Max speed field removed for person tracking focus
 
-    public double getMaxSpeed() {
-        return maxSpeed;
-    }
+    // Fuel consumption field removed for person tracking focus
 
-    public void setMaxSpeed(double maxSpeed) {
-        this.maxSpeed = maxSpeed;
-    }
-
-    private double spentFuel;
-
-    public double getSpentFuel() {
-        return spentFuel;
-    }
-
-    public void setSpentFuel(double spentFuel) {
-        this.spentFuel = spentFuel;
-    }
-
-    private double startOdometer;
-
-    public double getStartOdometer() {
-        return startOdometer;
-    }
-
-    public void setStartOdometer(double startOdometer) {
-        this.startOdometer = startOdometer;
-    }
-    private double endOdometer;
-
-    public double getEndOdometer() {
-        return endOdometer;
-    }
-
-    public void setEndOdometer(double endOdometer) {
-        this.endOdometer = endOdometer;
-    }
+    // Odometer fields removed for person tracking focus
 
     private Date startTime;
 

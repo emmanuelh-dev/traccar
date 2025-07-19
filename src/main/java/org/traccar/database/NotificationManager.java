@@ -167,9 +167,9 @@ public class NotificationManager {
             if (event.getGeofenceId() != 0) {
                 eventData.setGeofence(cacheManager.getObject(Geofence.class, event.getGeofenceId()));
             }
-            if (event.getMaintenanceId() != 0) {
-                eventData.setMaintenance(cacheManager.getObject(Maintenance.class, event.getMaintenanceId()));
-            }
+            // if (event.getMaintenanceId() != 0) {
+            //     eventData.setMaintenance(cacheManager.getObject(Maintenance.class, event.getMaintenanceId()));
+            // }
             eventForwarder.forward(eventData, (success, throwable) -> {
                 if (!success) {
                     LOGGER.warn("Event forwarding failed", throwable);

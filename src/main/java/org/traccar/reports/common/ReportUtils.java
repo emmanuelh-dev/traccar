@@ -40,7 +40,7 @@ import org.traccar.helper.model.PositionUtil;
 import org.traccar.helper.model.UserUtil;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Device;
-import org.traccar.model.Driver;
+// Driver import removed for person tracking focus
 import org.traccar.model.Event;
 import org.traccar.model.Position;
 import org.traccar.model.User;
@@ -98,35 +98,11 @@ public class ReportUtils {
         }
     }
 
-    public double calculateFuel(Position first, Position last) {
-        if (first.hasAttribute(Position.KEY_FUEL_USED) && last.hasAttribute(Position.KEY_FUEL_USED)) {
-            return last.getDouble(Position.KEY_FUEL_USED) - first.getDouble(Position.KEY_FUEL_USED);
-        } else if (first.hasAttribute(Position.KEY_FUEL_LEVEL) && last.hasAttribute(Position.KEY_FUEL_LEVEL)) {
-            return first.getDouble(Position.KEY_FUEL_LEVEL) - last.getDouble(Position.KEY_FUEL_LEVEL);
-        }
-        return 0;
-    }
+    // Fuel calculation method removed for person tracking focus
 
-    public String findDriver(Position firstPosition, Position lastPosition) {
-        if (firstPosition.hasAttribute(Position.KEY_DRIVER_UNIQUE_ID)) {
-            return firstPosition.getString(Position.KEY_DRIVER_UNIQUE_ID);
-        } else if (lastPosition.hasAttribute(Position.KEY_DRIVER_UNIQUE_ID)) {
-            return lastPosition.getString(Position.KEY_DRIVER_UNIQUE_ID);
-        }
-        return null;
-    }
+    // Driver finding method removed for person tracking focus
 
-    public String findDriverName(String driverUniqueId) throws StorageException {
-        if (driverUniqueId != null) {
-            Driver driver = storage.getObject(Driver.class, new Request(
-                    new Columns.All(),
-                    new Condition.Equals("uniqueId", driverUniqueId)));
-            if (driver != null) {
-                return driver.getName();
-            }
-        }
-        return null;
-    }
+    // Driver lookup method removed for person tracking focus
 
     public org.jxls.common.Context initializeContext(long userId) throws StorageException {
         var server = permissionsService.getServer();
@@ -134,7 +110,7 @@ public class ReportUtils {
         var context = PoiTransformer.createInitialContext();
         context.putVar("distanceUnit", UserUtil.getDistanceUnit(server, user));
         context.putVar("speedUnit", UserUtil.getSpeedUnit(server, user));
-        context.putVar("volumeUnit", UserUtil.getVolumeUnit(server, user));
+        // Volume unit removed for person tracking focus
         context.putVar("webUrl", velocityEngine.getProperty("web.url"));
         context.putVar("dateTool", new DateTool());
         context.putVar("numberTool", new NumberTool());
@@ -194,21 +170,12 @@ public class ReportUtils {
         if (tripDuration > 0) {
             trip.setAverageSpeed(UnitsConverter.knotsFromMps(trip.getDistance() * 1000 / tripDuration));
         }
-        trip.setMaxSpeed(maxSpeed);
-        trip.setSpentFuel(calculateFuel(startTrip, endTrip));
+        // Max speed removed for person tracking focus
+        // Fuel consumption removed for person tracking focus
 
-        trip.setDriverUniqueId(findDriver(startTrip, endTrip));
-        trip.setDriverName(findDriverName(trip.getDriverUniqueId()));
+        // Driver information removed for person tracking focus
 
-        if (!ignoreOdometer
-                && startTrip.getDouble(Position.KEY_ODOMETER) != 0
-                && endTrip.getDouble(Position.KEY_ODOMETER) != 0) {
-            trip.setStartOdometer(startTrip.getDouble(Position.KEY_ODOMETER));
-            trip.setEndOdometer(endTrip.getDouble(Position.KEY_ODOMETER));
-        } else {
-            trip.setStartOdometer(startTrip.getDouble(Position.KEY_TOTAL_DISTANCE));
-            trip.setEndOdometer(endTrip.getDouble(Position.KEY_TOTAL_DISTANCE));
-        }
+        // Odometer readings removed for person tracking focus
 
         return trip;
     }
@@ -236,21 +203,11 @@ public class ReportUtils {
 
         long stopDuration = endStop.getFixTime().getTime() - startStop.getFixTime().getTime();
         stop.setDuration(stopDuration);
-        stop.setSpentFuel(calculateFuel(startStop, endStop));
+        // Fuel consumption removed for person tracking focus
 
-        if (startStop.hasAttribute(Position.KEY_HOURS) && endStop.hasAttribute(Position.KEY_HOURS)) {
-            stop.setEngineHours(endStop.getLong(Position.KEY_HOURS) - startStop.getLong(Position.KEY_HOURS));
-        }
+        // Engine hours removed for person tracking focus
 
-        if (!ignoreOdometer
-                && startStop.getDouble(Position.KEY_ODOMETER) != 0
-                && endStop.getDouble(Position.KEY_ODOMETER) != 0) {
-            stop.setStartOdometer(startStop.getDouble(Position.KEY_ODOMETER));
-            stop.setEndOdometer(endStop.getDouble(Position.KEY_ODOMETER));
-        } else {
-            stop.setStartOdometer(startStop.getDouble(Position.KEY_TOTAL_DISTANCE));
-            stop.setEndOdometer(endStop.getDouble(Position.KEY_TOTAL_DISTANCE));
-        }
+        // Odometer readings removed for person tracking focus
 
         return stop;
 
@@ -312,7 +269,7 @@ public class ReportUtils {
             motionState.setMotionState(initialValue);
 
             boolean detected = trips == motionState.getMotionState();
-            double maxSpeed = 0;
+            // Max speed tracking removed for person tracking focus
             int startEventIndex = detected ? 0 : -1;
             int startNoEventIndex = -1;
             for (int i = 0; i < positions.size(); i++) {
@@ -321,14 +278,14 @@ public class ReportUtils {
                     if (motion == trips) {
                         if (!detected) {
                             startEventIndex = i;
-                            maxSpeed = positions.get(i).getSpeed();
+                            // Speed tracking removed for person tracking focus
                         }
                         startNoEventIndex = -1;
                     } else {
                         startNoEventIndex = i;
                     }
                 } else {
-                    maxSpeed = Math.max(maxSpeed, positions.get(i).getSpeed());
+                    // Speed tracking removed for person tracking focus
                 }
 
                 MotionProcessor.updateState(motionState, positions.get(i), motion, tripsConfig);
@@ -339,7 +296,7 @@ public class ReportUtils {
                     } else if (startEventIndex >= 0 && startNoEventIndex >= 0) {
                         result.add(calculateTripOrStop(
                                 device, positions.get(startEventIndex), positions.get(startNoEventIndex),
-                                maxSpeed, ignoreOdometer, reportClass));
+                                0, ignoreOdometer, reportClass));
                         detected = false;
                         startEventIndex = -1;
                         startNoEventIndex = -1;
@@ -350,7 +307,7 @@ public class ReportUtils {
                 int endIndex = startNoEventIndex >= 0 ? startNoEventIndex : positions.size() - 1;
                 result.add(calculateTripOrStop(
                         device, positions.get(startEventIndex), positions.get(endIndex),
-                        maxSpeed, ignoreOdometer, reportClass));
+                        0, ignoreOdometer, reportClass));
             }
         }
 

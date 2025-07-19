@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Geofence;
-import org.traccar.model.Maintenance;
+// import org.traccar.model.Maintenance; // Removed for person tracking focus
 import org.traccar.model.Position;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -65,14 +65,9 @@ public class EventData {
         this.geofence = geofence;
     }
 
-    private Maintenance maintenance;
-
-    public Maintenance getMaintenance() {
-        return maintenance;
-    }
-
-    public void setMaintenance(Maintenance maintenance) {
-        this.maintenance = maintenance;
-    }
+    // Maintenance-related fields removed for person tracking focus
+    // private Maintenance maintenance;
+    // public Maintenance getMaintenance() { return maintenance; }
+    // public void setMaintenance(Maintenance maintenance) { this.maintenance = maintenance; }
 
 }

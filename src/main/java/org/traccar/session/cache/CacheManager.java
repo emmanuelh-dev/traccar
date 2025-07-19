@@ -26,11 +26,11 @@ import org.traccar.model.Attribute;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Calendar;
 import org.traccar.model.Device;
-import org.traccar.model.Driver;
+// import org.traccar.model.Driver; // Removed for person tracking focus
 import org.traccar.model.Geofence;
 import org.traccar.model.Group;
 import org.traccar.model.GroupedModel;
-import org.traccar.model.Maintenance;
+// import org.traccar.model.Maintenance; // Removed for person tracking focus
 import org.traccar.model.Notification;
 import org.traccar.model.ObjectOperation;
 import org.traccar.model.Permission;
@@ -58,7 +58,8 @@ public class CacheManager implements BroadcastInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheManager.class);
 
     private static final Set<Class<? extends BaseModel>> GROUPED_CLASSES =
-            Set.of(Attribute.class, Driver.class, Geofence.class, Maintenance.class, Notification.class);
+            Set.of(Attribute.class, Geofence.class, Notification.class);
+            // Driver.class and Maintenance.class removed for person tracking focus
 
     private final Config config;
     private final Storage storage;

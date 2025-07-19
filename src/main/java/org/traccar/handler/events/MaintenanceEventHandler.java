@@ -14,11 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Removed for person tracking focus - vehicle maintenance not needed for people
+/*
 package org.traccar.handler.events;
 
 import jakarta.inject.Inject;
 import org.traccar.model.Event;
-import org.traccar.model.Maintenance;
+// import org.traccar.model.Maintenance; // Removed for person tracking focus
 import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
 
@@ -66,3 +68,4 @@ public class MaintenanceEventHandler extends BaseEventHandler {
     }
 
 }
+*/

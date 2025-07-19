@@ -108,23 +108,5 @@ public class TripReportItem extends BaseReportItem {
         this.duration = duration;
     }
 
-    private String driverUniqueId;
-
-    public String getDriverUniqueId() {
-        return driverUniqueId;
-    }
-
-    public void setDriverUniqueId(String driverUniqueId) {
-        this.driverUniqueId = driverUniqueId;
-    }
-
-    private String driverName;
-
-    public String getDriverName() {
-        return driverName;
-    }
-
-    public void setDriverName(String driverName) {
-        this.driverName = driverName;
-    }
+    // Driver fields removed for person tracking focus
 }

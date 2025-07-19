@@ -50,7 +50,8 @@ public final class ObdDecoder {
             codes.append(' ').append(decodeCode(numValue));
         }
         if (!codes.isEmpty()) {
-            return createEntry(Position.KEY_DTCS, codes.toString().trim());
+            // return createEntry(Position.KEY_DTCS, codes.toString().trim());
+            return null;
         } else {
             return null;
         }
@@ -67,19 +68,20 @@ public final class ObdDecoder {
     }
 
     public static Map.Entry<String, Object> decodeData(int pid, long value, boolean convert) {
-        return switch (pid) {
-            case 0x04 -> createEntry(Position.KEY_ENGINE_LOAD, convert ? value * 100 / 255 : value);
-            case 0x05 -> createEntry(Position.KEY_COOLANT_TEMP, convert ? value - 40 : value);
-            case 0x0B -> createEntry("mapIntake", value);
-            case 0x0C -> createEntry(Position.KEY_RPM, convert ? value / 4 : value);
-            case 0x0D -> createEntry(Position.KEY_OBD_SPEED, value);
-            case 0x0F -> createEntry("intakeTemp", convert ? value - 40 : value);
-            case 0x11 -> createEntry(Position.KEY_THROTTLE, convert ? value * 100 / 255 : value);
-            case 0x21 -> createEntry("milDistance", value);
-            case 0x2F -> createEntry(Position.KEY_FUEL_LEVEL, convert ? value * 100 / 255 : value);
-            case 0x31 -> createEntry("clearedDistance", value);
-            default -> null;
-        };
+        // return switch (pid) {
+        //     case 0x04 -> createEntry(Position.KEY_ENGINE_LOAD, convert ? value * 100 / 255 : value);
+        //     case 0x05 -> createEntry(Position.KEY_COOLANT_TEMP, convert ? value - 40 : value);
+        //     case 0x0B -> createEntry("mapIntake", value);
+        //     case 0x0C -> createEntry(Position.KEY_RPM, convert ? value / 4 : value);
+        //     case 0x0D -> createEntry(Position.KEY_OBD_SPEED, value);
+        //     case 0x0F -> createEntry("intakeTemp", convert ? value - 40 : value);
+        //     case 0x11 -> createEntry(Position.KEY_THROTTLE, convert ? value * 100 / 255 : value);
+        //     case 0x21 -> createEntry("milDistance", value);
+        //     case 0x2F -> createEntry(Position.KEY_FUEL_LEVEL, convert ? value * 100 / 255 : value);
+        //     case 0x31 -> createEntry("clearedDistance", value);
+        //     default -> null;
+        // };
+        return null;
     }
 
 }

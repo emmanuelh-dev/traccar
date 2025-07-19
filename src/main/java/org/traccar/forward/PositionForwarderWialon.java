@@ -96,7 +96,8 @@ public class PositionForwarderWialon implements PositionForwarder {
                 (int) UnitsConverter.kphFromKnots(position.getSpeed()),
                 (int) position.getCourse(),
                 (int) position.getAltitude(),
-                position.getString(Position.KEY_DRIVER_UNIQUE_ID, "NA"),
+                // position.getString(Position.KEY_DRIVER_UNIQUE_ID, "NA"),
+                "NA",
                 formatAttributes(position.getAttributes()));
 
         String message;
