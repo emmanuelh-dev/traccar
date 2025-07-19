@@ -57,7 +57,8 @@ public class Command extends BaseCommand {
     public static final String TYPE_SET_ODOMETER = "setOdometer";
     public static final String TYPE_GET_MODEM_STATUS = "getModemStatus";
     public static final String TYPE_GET_DEVICE_STATUS = "getDeviceStatus";
-    public static final String TYPE_SET_SPEED_LIMIT = "setSpeedLimit";
+    // Removed for person tracking focus - speed limits are vehicle-specific
+    // public static final String TYPE_SET_SPEED_LIMIT = "setSpeedLimit";
     public static final String TYPE_MODE_POWER_SAVING = "modePowerSaving";
     public static final String TYPE_MODE_DEEP_SLEEP = "modeDeepSleep";
 
@@ -66,7 +67,8 @@ public class Command extends BaseCommand {
     public static final String TYPE_ALARM_SOS = "alarmSos";
     public static final String TYPE_ALARM_REMOVE = "alarmRemove";
     public static final String TYPE_ALARM_CLOCK = "alarmClock";
-    public static final String TYPE_ALARM_SPEED = "alarmSpeed";
+    // Removed for person tracking focus - speed alarms are vehicle-specific
+    // public static final String TYPE_ALARM_SPEED = "alarmSpeed";
     public static final String TYPE_ALARM_FALL = "alarmFall";
     public static final String TYPE_ALARM_VIBRATION = "alarmVibration";
 

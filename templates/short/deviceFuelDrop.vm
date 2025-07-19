@@ -1,2 +1,5 @@
+<!-- Removed for person tracking focus - fuel monitoring is vehicle-specific -->
+<!--
 #set($subject = "$device.name: fuel drop")
 $device.name fuel drop at $dateTool.format("YYYY-MM-dd HH:mm:ss", $event.eventTime, $locale, $timezone)
+-->

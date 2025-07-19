@@ -1,3 +1,5 @@
+// Removed for person tracking focus - overspeed tests are vehicle-specific
+/*
 package org.traccar.handler.events;
 
 import org.junit.jupiter.api.Test;
@@ -66,3 +68,4 @@ public class OverspeedEventHandlerTest  extends BaseTest {
     }
 
 }
+*/

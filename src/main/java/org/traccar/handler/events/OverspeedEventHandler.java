@@ -1,3 +1,4 @@
+// Removed for person tracking focus - overspeed events are vehicle-specific
 /*
  * Copyright 2016 - 2024 Anton Tananaev (anton@traccar.org)
  * Copyright 2018 Andrey Kunitsyn (andrey@traccar.org)
@@ -14,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
 package org.traccar.handler.events;
 
 import jakarta.inject.Inject;
@@ -117,3 +119,4 @@ public class OverspeedEventHandler extends BaseEventHandler {
     }
 
 }
+*/

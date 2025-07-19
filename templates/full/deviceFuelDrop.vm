@@ -1,3 +1,5 @@
+<!-- Removed for person tracking focus - fuel monitoring is vehicle-specific -->
+<!--
 #set($subject = "$device.name: fuel drop")
 <!DOCTYPE html>
 <html>
@@ -9,3 +11,4 @@ Point: <a href="$webUrl?eventId=$event.id">#{if}($position.address)$position.add
 <a href="$webUrl/settings/notifications?token=$token">Unsubscribe</a>
 </body>
 </html>
+-->

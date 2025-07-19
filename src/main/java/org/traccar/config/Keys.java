@@ -323,31 +323,40 @@ public final class Keys {
             List.of(KeyType.CONFIG),
             "https://www.traccar.org/analytics/");
 
-    /**
+    // Removed for person tracking focus - fuel monitoring is vehicle-specific
+    /*
      * Fuel drop threshold value. When fuel level drops from one position to another for more the value, an event is
      * generated.
      */
+    /*
     public static final ConfigKey<Double> EVENT_FUEL_DROP_THRESHOLD = new DoubleConfigKey(
             "fuelDropThreshold",
             List.of(KeyType.SERVER, KeyType.DEVICE),
             0.0);
+    */
 
-    /**
+    // Removed for person tracking focus - fuel monitoring is vehicle-specific
+    /*
      * Fuel increase threshold value. When fuel level increases from one position to another for more the value, an
      * event is generated.
      */
+    /*
     public static final ConfigKey<Double> EVENT_FUEL_INCREASE_THRESHOLD = new DoubleConfigKey(
             "fuelIncreaseThreshold",
             List.of(KeyType.SERVER, KeyType.DEVICE),
             0.0);
+    */
 
-    /**
+    // Removed for person tracking focus - speed limits are vehicle-specific
+    /*
      * Speed limit value in knots.
      */
+    /*
     public static final ConfigKey<Double> EVENT_OVERSPEED_LIMIT = new DoubleConfigKey(
             "speedLimit",
             List.of(KeyType.SERVER, KeyType.DEVICE),
             0.0);
+    */
 
     /**
      * Disable device sharing on the server.
@@ -356,42 +365,57 @@ public final class Keys {
             "disableShare",
             List.of(KeyType.SERVER));
 
-    /**
+    // Removed for person tracking focus - overspeed thresholds are vehicle-specific
+    /*
      * Speed limit threshold multiplier. For example, if the speed limit is 100, but we only want to generate an event
      * if the speed is higher than 105, this parameter can be set to 1.05. Default multiplier is 1.0.
      */
+    /*
     public static final ConfigKey<Double> EVENT_OVERSPEED_THRESHOLD_MULTIPLIER = new DoubleConfigKey(
             "event.overspeed.thresholdMultiplier",
             List.of(KeyType.CONFIG),
             1.0);
+    */
 
-    /**
+    // Removed for person tracking focus - overspeed duration is vehicle-specific
+    /*
      * Minimal over speed duration to trigger the event. Value in seconds.
      */
+    /*
     public static final ConfigKey<Long> EVENT_OVERSPEED_MINIMAL_DURATION = new LongConfigKey(
             "event.overspeed.minimalDuration",
             List.of(KeyType.CONFIG));
+    */
 
-    /**
+    // Removed for person tracking focus - geofence speed limits are vehicle-specific
+    /*
      * Relevant only for geofence speed limits. Use the lowest speed limit from all geofences.
      */
+    /*
     public static final ConfigKey<Boolean> EVENT_OVERSPEED_PREFER_LOWEST = new BooleanConfigKey(
             "event.overspeed.preferLowest",
             List.of(KeyType.CONFIG));
+    */
 
-    /**
+    // Removed for person tracking focus - driver behavior is vehicle-specific
+    /*
      * Driver behavior acceleration threshold. Value is in meter per second squared.
      */
+    /*
     public static final ConfigKey<Double> EVENT_BEHAVIOR_ACCELERATION_THRESHOLD = new DoubleConfigKey(
             "event.behavior.accelerationThreshold",
             List.of(KeyType.CONFIG));
+    */
 
-    /**
+    // Removed for person tracking focus - driver behavior is vehicle-specific
+    /*
      * Driver behavior braking threshold. Value is in meter per second squared.
      */
+    /*
     public static final ConfigKey<Double> EVENT_BEHAVIOR_BRAKING_THRESHOLD = new DoubleConfigKey(
             "event.behavior.brakingThreshold",
             List.of(KeyType.CONFIG));
+    */
 
     /**
      * Do not generate alert event if same alert was present in last known location.
