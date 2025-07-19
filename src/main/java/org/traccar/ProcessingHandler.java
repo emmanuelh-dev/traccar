@@ -44,7 +44,7 @@ import org.traccar.handler.SpeedLimitHandler;
 import org.traccar.handler.TimeHandler;
 import org.traccar.handler.events.AlarmEventHandler;
 import org.traccar.handler.events.BaseEventHandler;
-import org.traccar.handler.events.BehaviorEventHandler;
+// import org.traccar.handler.events.BehaviorEventHandler; // Removed for person tracking focus
 import org.traccar.handler.events.CommandResultEventHandler;
 // import org.traccar.handler.events.DriverEventHandler; // Removed for person tracking focus
 // import org.traccar.handler.events.FuelEventHandler; // Removed for person tracking focus
@@ -53,7 +53,7 @@ import org.traccar.handler.events.IgnitionEventHandler;
 // import org.traccar.handler.events.MaintenanceEventHandler; // Removed for person tracking focus
 import org.traccar.handler.events.MediaEventHandler;
 import org.traccar.handler.events.MotionEventHandler;
-import org.traccar.handler.events.OverspeedEventHandler;
+// import org.traccar.handler.events.OverspeedEventHandler; // Removed for person tracking focus
 import org.traccar.handler.network.AcknowledgementHandler;
 import org.traccar.helper.PositionLogger;
 import org.traccar.model.Position;
@@ -119,8 +119,8 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
         eventHandlers = Stream.of(
                 MediaEventHandler.class,
                 CommandResultEventHandler.class,
-                OverspeedEventHandler.class,
-                BehaviorEventHandler.class,
+                // OverspeedEventHandler.class, // Removed for person tracking focus
+                // BehaviorEventHandler.class, // Removed for person tracking focus
                 // FuelEventHandler.class, // Removed for person tracking focus
                 MotionEventHandler.class,
                 GeofenceEventHandler.class,

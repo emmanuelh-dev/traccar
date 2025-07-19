@@ -1,3 +1,4 @@
+// Removed for person tracking focus - vehicle behavior monitoring not needed for people
 /*
  * Copyright 2021 - 2024 Anton Tananaev (anton@traccar.org)
  *
@@ -13,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
 package org.traccar.handler.events;
 
 import jakarta.inject.Inject;
@@ -57,3 +59,4 @@ public class BehaviorEventHandler extends BaseEventHandler {
     }
 
 }
+*/
