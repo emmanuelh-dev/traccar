@@ -114,7 +114,8 @@ public class Position extends Message {
     public static final String ALARM_GEOFENCE_ENTER = "geofenceEnter";
     public static final String ALARM_GEOFENCE_EXIT = "geofenceExit";
     public static final String ALARM_GPS_ANTENNA_CUT = "gpsAntennaCut";
-    public static final String ALARM_ACCIDENT = "accident";
+    // Removed for person tracking focus - accidents are vehicle-specific
+    // public static final String ALARM_ACCIDENT = "accident";
     public static final String ALARM_POWER_CUT = "powerCut";
     public static final String ALARM_POWER_RESTORED = "powerRestored";
     public static final String ALARM_JAMMING = "jamming";

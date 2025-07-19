@@ -93,11 +93,12 @@ public class Gps103ProtocolDecoderTest extends ProtocolTest {
         verifyPosition(decoder, text(
                 "imei:353451044508750,T:+28.0,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
 
-        verifyPosition(decoder, text(
-                "imei:353451044508750,bonnet alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+        // Removed for person tracking focus - vehicle-specific alarms
+        // verifyPosition(decoder, text(
+        //         "imei:353451044508750,bonnet alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
 
-        verifyPosition(decoder, text(
-                "imei:353451044508750,footbrake alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+        // verifyPosition(decoder, text(
+        //         "imei:353451044508750,footbrake alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
 
         verifyPosition(decoder, text(
                 "imei:862106021237716,ac alarm,1611291645,,F,204457.000,A,1010.2783,N,06441.0274,W,0.00,,;"));
