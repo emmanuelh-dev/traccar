@@ -45,6 +45,11 @@ public class GeofenceSessionManager {
      * Maneja los eventos de entrada y salida de geozonas
      */
     public void handleGeofenceEvent(Event event) {
+        if (event.getGeofenceId() == 0) {
+            LOGGER.debug("Skipping geofence session handling for undefined geofence (geofenceId=0) for device {}", event.getDeviceId());
+            return;
+        }
+        
         try {
             if (Event.TYPE_GEOFENCE_ENTER.equals(event.getType())) {
                 handleGeofenceEnter(event);

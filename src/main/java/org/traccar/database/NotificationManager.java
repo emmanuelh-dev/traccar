@@ -145,27 +145,31 @@ public class NotificationManager {
         }
 
         if (event.getType().equals(Event.TYPE_GEOFENCE_ENTER) || event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
-            Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
-            if (geofence.getNotify()) {
-                User geofenceOwner = cacheManager.getObject(User.class, geofence.getUserId());
-                if (geofenceOwner != null) {
-                    if (blockedUsers.contains(geofenceOwner.getId())) {
-                        LOGGER.info("User {} notification blocked", geofenceOwner.getId());
-                        return;
-                    }
+            if (event.getGeofenceId() == 0) {
+                LOGGER.debug("Skipping notification for undefined geofence event (geofenceId=0) for device {}", event.getDeviceId());
+            } else {
+                Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
+                if (geofence != null && geofence.getNotify()) {
+                    User geofenceOwner = cacheManager.getObject(User.class, geofence.getUserId());
+                    if (geofenceOwner != null) {
+                        if (blockedUsers.contains(geofenceOwner.getId())) {
+                            LOGGER.info("User {} notification blocked", geofenceOwner.getId());
+                            return;
+                        }
 
-                    Notification notification = new Notification();
-                    notification.setType(event.getType());
-                    notification.setNotificators(notificatorManager.getNotificators());
+                        Notification notification = new Notification();
+                        notification.setType(event.getType());
+                        notification.setNotificators(notificatorManager.getNotificators());
 
-                    for (String notificator : notification.getNotificatorsTypes()) {
-                        try {
-                            NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
-                            if (message != null) {
-                                saveAlert(event, notification, geofenceOwner, notificator, message);
+                        for (String notificator : notification.getNotificatorsTypes()) {
+                            try {
+                                NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
+                                if (message != null) {
+                                    saveAlert(event, notification, geofenceOwner, notificator, message);
+                                }
+                            } catch (MessageException exception) {
+                                LOGGER.warn("Notification failed", exception);
                             }
-                        } catch (MessageException exception) {
-                            LOGGER.warn("Notification failed", exception);
                         }
                     }
                 }
