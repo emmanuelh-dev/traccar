@@ -147,16 +147,10 @@ public class NotificationManager {
         if (event.getType().equals(Event.TYPE_GEOFENCE_ENTER) || event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
             Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
             if (geofence.getNotify()) {
-                Set<User> deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), User.class);
-                deviceUsers.forEach(user -> {
-                    // Verificar si el usuario es el propietario de la geozona
-                    if (user.getId() != geofence.getUserId()) {
-                        LOGGER.info("User {} is not the owner of geofence {}", user.getId(), geofence.getId());
-                        return;
-                    }
-                    
-                    if (blockedUsers.contains(user.getId())) {
-                        LOGGER.info("User {} notification blocked", user.getId());
+                User geofenceOwner = cacheManager.getObject(User.class, geofence.getUserId());
+                if (geofenceOwner != null) {
+                    if (blockedUsers.contains(geofenceOwner.getId())) {
+                        LOGGER.info("User {} notification blocked", geofenceOwner.getId());
                         return;
                     }
 
@@ -166,15 +160,15 @@ public class NotificationManager {
 
                     for (String notificator : notification.getNotificatorsTypes()) {
                         try {
-                            NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, user, event, position);
+                            NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
                             if (message != null) {
-                                saveAlert(event, notification, user, notificator, message);
+                                saveAlert(event, notification, geofenceOwner, notificator, message);
                             }
                         } catch (MessageException exception) {
                             LOGGER.warn("Notification failed", exception);
                         }
                     }
-                });
+                }
             }
         }
     }
