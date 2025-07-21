@@ -39,6 +39,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -91,25 +92,29 @@ public class NotificationManager {
             return;
         }
 
-        var notifications = cacheManager.getDeviceNotifications(event.getDeviceId()).stream()
-                .filter(notification -> notification.getType().equals(event.getType()))
-                .filter(notification -> {
-                    if (event.getType().equals(Event.TYPE_ALARM)) {
-                        String alarmsAttribute = notification.getString("alarms");
-                        if (alarmsAttribute != null) {
-                            return Arrays.asList(alarmsAttribute.split(","))
-                                    .contains(event.getString(Position.KEY_ALARM));
+        // Skip general notifications for geofence events as they are handled separately
+        var notifications = List.<Notification>of();
+        if (!event.getType().equals(Event.TYPE_GEOFENCE_ENTER) && !event.getType().equals(Event.TYPE_GEOFENCE_EXIT)) {
+            notifications = cacheManager.getDeviceNotifications(event.getDeviceId()).stream()
+                    .filter(notification -> notification.getType().equals(event.getType()))
+                    .filter(notification -> {
+                        if (event.getType().equals(Event.TYPE_ALARM)) {
+                            String alarmsAttribute = notification.getString("alarms");
+                            if (alarmsAttribute != null) {
+                                return Arrays.asList(alarmsAttribute.split(","))
+                                        .contains(event.getString(Position.KEY_ALARM));
+                            }
+                            return false;
                         }
-                        return false;
-                    }
-                    return true;
-                })
-                .filter(notification -> {
-                    long calendarId = notification.getCalendarId();
-                    Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
-                    return calendar == null || calendar.checkMoment(event.getEventTime());
-                })
-                .toList();
+                        return true;
+                    })
+                    .filter(notification -> {
+                        long calendarId = notification.getCalendarId();
+                        Calendar calendar = calendarId != 0 ? cacheManager.getObject(Calendar.class, calendarId) : null;
+                        return calendar == null || calendar.checkMoment(event.getEventTime());
+                    })
+                    .toList();
+        }
 
         Device device = cacheManager.getObject(Device.class, event.getDeviceId());
         LOGGER.info(
@@ -150,25 +155,30 @@ public class NotificationManager {
             } else {
                 Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
                 if (geofence != null && geofence.getNotify()) {
-                    Set<Long> notifiedUserIds = new HashSet<>();
-                    
                     Notification notification = new Notification();
                     notification.setType(event.getType());
                     notification.setNotificators(notificatorManager.getNotificators());
                     
-                    // Enviar notificación al propietario de la geozona
+                    // Send notification only to the geofence owner if they have device access
                     User geofenceOwner = cacheManager.getObject(User.class, geofence.getUserId());
                     if (geofenceOwner != null && !blockedUsers.contains(geofenceOwner.getId())) {
-                        notifiedUserIds.add(geofenceOwner.getId());
-                        for (String notificator : notification.getNotificatorsTypes()) {
-                            try {
-                                NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
-                                if (message != null) {
-                                    saveAlert(event, notification, geofenceOwner, notificator, message);
+                        // Check if geofence owner has access to the device
+                        boolean hasDeviceAccess = cacheManager.getDeviceObjects(event.getDeviceId(), User.class).stream()
+                                .anyMatch(user -> user.getId() == geofenceOwner.getId());
+                        
+                        if (hasDeviceAccess) {
+                            for (String notificator : notification.getNotificatorsTypes()) {
+                                try {
+                                    NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
+                                    if (message != null) {
+                                        saveAlert(event, notification, geofenceOwner, notificator, message);
+                                    }
+                                } catch (MessageException exception) {
+                                    LOGGER.warn("Notification failed", exception);
                                 }
-                            } catch (MessageException exception) {
-                                LOGGER.warn("Notification failed", exception);
                             }
+                        } else {
+                            LOGGER.debug("Geofence owner {} does not have access to device {}, skipping notification", geofenceOwner.getId(), event.getDeviceId());
                         }
                     }
                 }
