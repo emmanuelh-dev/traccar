@@ -29,8 +29,8 @@
       <column name="duration" type="BIGINT" defaultValue="0">
         <constraints nullable="false" />
       </column>
-      <column name="enterpositionid" type="BIGINT" />
-      <column name="exitpositionid" type="BIGINT" />
+      <column name="enterpositionid" type="INT" />
+      <column name="exitpositionid" type="INT" />
     </createTable>
 
     <!-- Índices para optimizar consultas -->

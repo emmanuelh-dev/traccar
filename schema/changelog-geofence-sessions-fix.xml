@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+  
+  <changeSet author="system" id="geofence-sessions-fix-position-columns">
+    
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="tc_geofence_sessions"/>
+      <columnExists tableName="tc_geofence_sessions" columnName="enterpositionid"/>
+      <columnExists tableName="tc_geofence_sessions" columnName="exitpositionid"/>
+    </preConditions>
+
+    <!-- Eliminar las foreign keys existentes -->
+    <dropForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      constraintName="fk_geofence_sessions_enterpositionid" />
+    
+    <dropForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      constraintName="fk_geofence_sessions_exitpositionid" />
+
+    <!-- Modificar las columnas de BIGINT a INT -->
+    <modifyDataType 
+      tableName="tc_geofence_sessions" 
+      columnName="enterpositionid" 
+      newDataType="INT" />
+    
+    <modifyDataType 
+      tableName="tc_geofence_sessions" 
+      columnName="exitpositionid" 
+      newDataType="INT" />
+
+    <!-- Recrear las foreign keys con los tipos correctos -->
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="enterpositionid" 
+      constraintName="fk_geofence_sessions_enterpositionid" 
+      onDelete="SET NULL" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_positions" />
+
+    <addForeignKeyConstraint 
+      baseTableName="tc_geofence_sessions" 
+      baseColumnNames="exitpositionid" 
+      constraintName="fk_geofence_sessions_exitpositionid" 
+      onDelete="SET NULL" 
+      referencedColumnNames="id" 
+      referencedTableName="tc_positions" />
+
+  </changeSet>
+
+</databaseChangeLog>

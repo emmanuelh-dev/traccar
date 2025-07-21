@@ -52,5 +52,6 @@
   <include file="changelog-inmates.xml" relativeToChangelogFile="true" />
   <include file="changelog-notify.xml" relativeToChangelogFile="true" />
   <include file="changelog-geofence-sessions.xml" relativeToChangelogFile="true" />
+  <include file="changelog-geofence-sessions-fix.xml" relativeToChangelogFile="true" />
 
 </databaseChangeLog>

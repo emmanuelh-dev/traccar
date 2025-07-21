@@ -170,10 +170,10 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
                     position.set("totalTruck", Double.parseDouble(values[10]));
                     position.set("totalTrailer", Double.parseDouble(values[11]));
                 } else {
-                    position.set(Position.KEY_RESULT, data);
+                    // position.set(Position.KEY_RESULT, data); // Comentado para evitar log
                 }
             } else {
-                position.set(Position.KEY_RESULT, ByteBufUtil.hexDump(buf.readSlice(length)));
+                // position.set(Position.KEY_RESULT, ByteBufUtil.hexDump(buf.readSlice(length))); // Comentado para evitar log
             }
         }
     }
@@ -646,11 +646,11 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
                     if (data.startsWith("GTSL")) {
                         position.set(Position.KEY_DRIVER_UNIQUE_ID, data.split("\\|")[4]);
                     } else {
-                        position.set(Position.KEY_RESULT, data);
+                        // position.set(Position.KEY_RESULT, data); // Comentado para evitar log
                     }
                 } else {
-                    position.set(Position.KEY_RESULT,
-                            ByteBufUtil.hexDump(buf.readSlice(length)));
+                    // position.set(Position.KEY_RESULT,
+                    //         ByteBufUtil.hexDump(buf.readSlice(length))); // Comentado para evitar log
                 }
             } else if (codec == CODEC_12) {
                 decodeSerial(channel, remoteAddress, deviceSession, position, buf);
