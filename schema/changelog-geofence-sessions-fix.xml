@@ -13,42 +13,44 @@
       <columnExists tableName="tc_geofence_sessions" columnName="exitpositionid"/>
     </preConditions>
 
-    <!-- Eliminar las foreign keys existentes -->
-    <dropForeignKeyConstraint 
-      baseTableName="tc_geofence_sessions" 
-      constraintName="fk_geofence_sessions_enterpositionid" />
-    
-    <dropForeignKeyConstraint 
-      baseTableName="tc_geofence_sessions" 
-      constraintName="fk_geofence_sessions_exitpositionid" />
-
-    <!-- Modificar las columnas de BIGINT a INT -->
-    <modifyDataType 
-      tableName="tc_geofence_sessions" 
-      columnName="enterpositionid" 
-      newDataType="INT" />
-    
-    <modifyDataType 
-      tableName="tc_geofence_sessions" 
-      columnName="exitpositionid" 
-      newDataType="INT" />
-
-    <!-- Recrear las foreign keys con los tipos correctos -->
-    <addForeignKeyConstraint 
-      baseTableName="tc_geofence_sessions" 
-      baseColumnNames="enterpositionid" 
-      constraintName="fk_geofence_sessions_enterpositionid" 
-      onDelete="SET NULL" 
-      referencedColumnNames="id" 
-      referencedTableName="tc_positions" />
-
-    <addForeignKeyConstraint 
-      baseTableName="tc_geofence_sessions" 
-      baseColumnNames="exitpositionid" 
-      constraintName="fk_geofence_sessions_exitpositionid" 
-      onDelete="SET NULL" 
-      referencedColumnNames="id" 
-      referencedTableName="tc_positions" />
+    <!-- Usar SQL directo para manejar las foreign keys de manera segura -->
+    <sql>
+      -- Eliminar foreign keys si existen
+      SET @sql = (SELECT IF(
+        (SELECT COUNT(*) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+         WHERE CONSTRAINT_NAME = 'fk_geofence_sessions_enterpositionid' 
+         AND TABLE_NAME = 'tc_geofence_sessions') > 0,
+        'ALTER TABLE tc_geofence_sessions DROP FOREIGN KEY fk_geofence_sessions_enterpositionid',
+        'SELECT "Foreign key fk_geofence_sessions_enterpositionid does not exist"'
+      ));
+      PREPARE stmt FROM @sql;
+      EXECUTE stmt;
+      DEALLOCATE PREPARE stmt;
+      
+      SET @sql = (SELECT IF(
+        (SELECT COUNT(*) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+         WHERE CONSTRAINT_NAME = 'fk_geofence_sessions_exitpositionid' 
+         AND TABLE_NAME = 'tc_geofence_sessions') > 0,
+        'ALTER TABLE tc_geofence_sessions DROP FOREIGN KEY fk_geofence_sessions_exitpositionid',
+        'SELECT "Foreign key fk_geofence_sessions_exitpositionid does not exist"'
+      ));
+      PREPARE stmt FROM @sql;
+      EXECUTE stmt;
+      DEALLOCATE PREPARE stmt;
+      
+      -- Modificar tipos de columnas
+      ALTER TABLE tc_geofence_sessions MODIFY COLUMN enterpositionid INT;
+      ALTER TABLE tc_geofence_sessions MODIFY COLUMN exitpositionid INT;
+      
+      -- Recrear foreign keys
+      ALTER TABLE tc_geofence_sessions 
+        ADD CONSTRAINT fk_geofence_sessions_enterpositionid 
+        FOREIGN KEY (enterpositionid) REFERENCES tc_positions(id) ON DELETE SET NULL;
+        
+      ALTER TABLE tc_geofence_sessions 
+        ADD CONSTRAINT fk_geofence_sessions_exitpositionid 
+        FOREIGN KEY (exitpositionid) REFERENCES tc_positions(id) ON DELETE SET NULL;
+    </sql>
 
   </changeSet>
 
