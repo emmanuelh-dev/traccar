@@ -72,12 +72,20 @@ public class GeofenceSessionManager {
                     new Condition.Equals("deviceId", event.getDeviceId()),
                     new Condition.Equals("geofenceId", event.getGeofenceId())
                 ),
-                new Condition.Compare("exitTime", "IS", "exitTime", null)
+                new Condition.Compare("exitTime", "IS", "NULL", null)
             )
         ));
         
         if (existingSession != null) {
-            // Ya existe una sesión abierta, actualizar la hora de entrada si es más reciente
+            // Ya existe una sesión abierta, verificar si el evento es significativamente diferente
+            long timeDifference = Math.abs(event.getEventTime().getTime() - existingSession.getEnterTime().getTime());
+            if (timeDifference < 30000) { // Menos de 30 segundos
+                LOGGER.debug("Ignoring duplicate enter event for device {} geofence {} (time difference: {} ms)", 
+                           event.getDeviceId(), event.getGeofenceId(), timeDifference);
+                return;
+            }
+            
+            // Actualizar la hora de entrada si es más reciente
             if (event.getEventTime().after(existingSession.getEnterTime())) {
                 existingSession.setEnterTime(event.getEventTime());
                 existingSession.setEnterPositionId(event.getPositionId());
@@ -85,6 +93,8 @@ public class GeofenceSessionManager {
                     new Columns.Exclude("id"),
                     new Condition.Equals("id", existingSession.getId())
                 ));
+                LOGGER.debug("Updated enter time for existing session device {} geofence {}", 
+                           event.getDeviceId(), event.getGeofenceId());
             }
             return;
         }
@@ -114,25 +124,21 @@ public class GeofenceSessionManager {
                     new Condition.Equals("deviceId", event.getDeviceId()),
                     new Condition.Equals("geofenceId", event.getGeofenceId())
                 ),
-                new Condition.Compare("exitTime", "IS", "exitTime", null)
+                new Condition.Compare("exitTime", "IS", "NULL", null)
             )
         ));
         
         if (session == null) {
-            // No existe sesión abierta, crear una nueva con salida pero sin entrada
-            // Esto puede ocurrir si el dispositivo ya estaba en la geozona cuando se inició el sistema
-            session = new GeofenceSession();
-            session.setDeviceId(event.getDeviceId());
-            session.setGeofenceId(event.getGeofenceId());
-            session.setEnterTime(event.getEventTime()); // Usar la misma hora como entrada
-            session.setExitTime(event.getEventTime());
-            session.setExitPositionId(event.getPositionId());
-            session.setDuration(0);
-            
-            storage.addObject(session, new Request(new Columns.Exclude("id")));
-            
-            LOGGER.debug("Created geofence session for device {} exiting geofence {} (no enter event)", 
-                         event.getDeviceId(), event.getGeofenceId());
+            LOGGER.debug("No open session found for device {} exiting geofence {}, skipping exit event", 
+                       event.getDeviceId(), event.getGeofenceId());
+            return;
+        }
+        
+        // Verificar si el evento de salida es muy cercano al de entrada (posible duplicado)
+        long timeDifference = event.getEventTime().getTime() - session.getEnterTime().getTime();
+        if (timeDifference < 10000) { // Menos de 10 segundos
+            LOGGER.debug("Ignoring exit event too close to enter for device {} geofence {} (duration: {} ms)", 
+                       event.getDeviceId(), event.getGeofenceId(), timeDifference);
             return;
         }
         
@@ -162,7 +168,7 @@ public class GeofenceSessionManager {
                 new Columns.All(),
                 new Condition.And(
                     new Condition.Equals("deviceId", deviceId),
-                    new Condition.Compare("exitTime", "IS", "exitTime", null)
+                    new Condition.Compare("exitTime", "IS", "NULL", null)
                 )
             ));
             
