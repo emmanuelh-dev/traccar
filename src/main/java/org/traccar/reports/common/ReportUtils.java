@@ -448,7 +448,7 @@ public class ReportUtils {
             if (item.getDeviceId() == event.getDeviceId() && item.getExitTime() == null) {
                 item.setExitTime(event.getEventTime());
                 Duration duration = Duration.between(item.getEnterTime().toInstant(), item.getExitTime().toInstant());
-                item.setDuration(duration.toSeconds());
+                item.setDuration(duration.toMillis());
                 return;
             }
         }
