@@ -150,17 +150,16 @@ public class NotificationManager {
             } else {
                 Geofence geofence = cacheManager.getObject(Geofence.class, event.getGeofenceId());
                 if (geofence != null && geofence.getNotify()) {
+                    Set<Long> notifiedUserIds = new HashSet<>();
+                    
+                    Notification notification = new Notification();
+                    notification.setType(event.getType());
+                    notification.setNotificators(notificatorManager.getNotificators());
+                    
+                    // Enviar notificación al propietario de la geozona
                     User geofenceOwner = cacheManager.getObject(User.class, geofence.getUserId());
-                    if (geofenceOwner != null) {
-                        if (blockedUsers.contains(geofenceOwner.getId())) {
-                            LOGGER.info("User {} notification blocked", geofenceOwner.getId());
-                            return;
-                        }
-
-                        Notification notification = new Notification();
-                        notification.setType(event.getType());
-                        notification.setNotificators(notificatorManager.getNotificators());
-
+                    if (geofenceOwner != null && !blockedUsers.contains(geofenceOwner.getId())) {
+                        notifiedUserIds.add(geofenceOwner.getId());
                         for (String notificator : notification.getNotificatorsTypes()) {
                             try {
                                 NotificationMessage message = notificatorManager.getNotificator(notificator).send(notification, geofenceOwner, event, position);
