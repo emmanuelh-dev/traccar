@@ -427,6 +427,16 @@ public final class Keys {
             25.0);
 
     /**
+     * Minimum duration in milliseconds for a geofence session to be considered valid. Sessions shorter than this
+     * duration will be automatically removed to avoid false positives caused by GPS triangulation issues.
+     * Default value is 300000 (5 minutes).
+     */
+    public static final ConfigKey<Long> GEOFENCE_MINIMUM_DURATION = new LongConfigKey(
+            "geofence.minimumDuration",
+            List.of(KeyType.CONFIG),
+            300000L);
+
+    /**
      * Enable in-memory database instead of an SQL database.
      */
     public static final ConfigKey<Boolean> DATABASE_MEMORY = new BooleanConfigKey(

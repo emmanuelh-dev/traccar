@@ -19,6 +19,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.traccar.config.Config;
+import org.traccar.config.Keys;
 import org.traccar.model.Event;
 import org.traccar.model.GeofenceSession;
 import org.traccar.storage.Storage;
@@ -34,10 +36,12 @@ public class GeofenceSessionManager {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(GeofenceSessionManager.class);
     
+    private final Config config;
     private final Storage storage;
     
     @Inject
-    public GeofenceSessionManager(Storage storage) {
+    public GeofenceSessionManager(Config config, Storage storage) {
+        this.config = config;
         this.storage = storage;
     }
     
@@ -149,6 +153,20 @@ public class GeofenceSessionManager {
         // Calcular duración en milisegundos
         long duration = event.getEventTime().getTime() - session.getEnterTime().getTime();
         session.setDuration(Math.max(0, duration)); // Asegurar que la duración no sea negativa
+        
+        // Verificar si la duración es menor al mínimo requerido
+        long minimumDuration = config.getLong(Keys.GEOFENCE_MINIMUM_DURATION);
+        if (duration < minimumDuration) {
+            // Eliminar la sesión corta en lugar de actualizarla
+            storage.removeObject(GeofenceSession.class, new Request(
+                new Columns.All(),
+                new Condition.Equals("id", session.getId())
+            ));
+            
+            LOGGER.debug("Removed short geofence session for device {} geofence {} (duration: {} ms < {} ms minimum)", 
+                       event.getDeviceId(), event.getGeofenceId(), duration, minimumDuration);
+            return;
+        }
         
         storage.updateObject(session, new Request(
             new Columns.Exclude("id"),
